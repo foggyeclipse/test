@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Расчет расстояния</title>
+</head>
+<body>
+    <h1>Расчет расстояния между точками</h1>
+    <form id="coordinate-form">
+        <div>
+            <label for="psr-latitude">Широта центра ПСР:</label>
+            <input type="text" id="psr-latitude" name="psr_lat" required>
+        </div>
+        <div>
+            <label for="psr-longitude">Долгота центра ПСР:</label>
+            <input type="text" id="psr-longitude" name="psr_lon" required>
+        </div>
+        <div>
+            <label for="finding-latitude">Широта нахождения:</label>
+            <input type="text" id="finding-latitude" name="finding_lat" required>
+        </div>
+        <div>
+            <label for="finding-longitude">Долгота нахождения:</label>
+            <input type="text" id="finding-longitude" name="finding_lon" required>
+        </div>
+        <button type="submit">Рассчитать</button>
+    </form>
+    <div id="response"></div>
+    <script>
+        document.getElementById('coordinate-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const psrLatitude = parseFloat(document.getElementById('psr-latitude').value);
+            const psrLongitude = parseFloat(document.getElementById('psr-longitude').value);
+            const findingLatitude = parseFloat(document.getElementById('finding-latitude').value);
+            const findingLongitude = parseFloat(document.getElementById('finding-longitude').value);
+
+            if (isNaN(psrLatitude) || isNaN(psrLongitude) || isNaN(findingLatitude) || isNaN(findingLongitude)) {
+                document.getElementById('response').innerText = 'Ошибка: Введите корректные числа.';
+                return;
+            }
+
+            fetch('/radius', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    coords_psr: { latitude: psrLatitude, longitude: psrLongitude },
+                    coords_finding: { latitude: findingLatitude, longitude: findingLongitude }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('response').innerText = `Успешно обработано! Расстояние: ${data.distance.toFixed(2)} км. Координаты: ${JSON.stringify(data)}`;
+                } else {
+                    document.getElementById('response').innerText = 'Ошибка: ' + data.message;
+                }
+            })
+            .catch(error => {
+                document.getElementById('response').innerText = 'Ошибка: Не удалось выполнить запрос.';
+            });
+        });
+    </script>
+</body>
+</html>
