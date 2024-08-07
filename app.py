@@ -4,6 +4,8 @@ import math
 from math import radians, cos, sin, sqrt, atan2
 import requests
 from bs4 import BeautifulSoup
+import re
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -45,8 +47,31 @@ def haversine(lat1, lon1, lat2, lon2):
     return distance * 1000  # Возвращаем расстояние в метрах
 
 # Функция расчета радиуса поиска
-def get_radius(hours_elapsed, terrain_passability=None, path_curvature=None, slope_degree=None, fatigue_level=None, time_of_day=None, weather_conditions=None, group_factor=None):
+def get_radius(age, behavior_data, hours_elapsed, terrain_passability=None, path_curvature=None, slope_degree=None, fatigue_level=None, time_of_day=None, weather_conditions=None, group_factor=None):
     normal_speed = 5  # Средняя скорость движения по асфальту в км/ч
+    behavior_coef = 1
+
+    if age < 18:
+        normal_speed = 4
+    elif age >= 60:
+        normal_speed = 3
+
+    # Используем регулярное выражение для поиска всех процентов в строке
+    percentages = re.findall(r"(\d+\.\d+)%", behavior_data)
+
+    # Преобразуем найденные проценты в числа
+    percentages = [float(p) for p in percentages]
+
+    # Найдем максимальный процент
+    max_percentage = max(percentages)
+
+    # Поиск текста с максимальным процентом
+    # Используем регулярное выражение для нахождения текста с максимальным процентом
+    pattern = rf"([^\d]+)\s*{max_percentage:.2f}%"
+
+    # Ищем текст с максимальным процентом
+    match = re.search(pattern, behavior_data)
+    print(match)
 
     # Коэффициенты понижения
     terrain_passability_coefficient = terrain_passability if terrain_passability is not None else 1.0
@@ -68,11 +93,17 @@ def get_radius(hours_elapsed, terrain_passability=None, path_curvature=None, slo
         * group_factor_coefficient
     )
 
+    if match == "остаться на месте":
+        behavior_coef = 0
+    elif match == "искать укрытие":
+        behavior_coef = 0.2
+
     # Радиус поиска
     search_radius = (
         hours_elapsed
         * normal_speed
         * speed_index
+        * behavior_coef
     )
     return search_radius
 
@@ -133,9 +164,18 @@ def radius():
 
         behavior = predict_behavior(data_beh)
 
+        date_of_loss = datetime.strptime(data.get('date_of_loss'), '%d.%m.%Y')
+        date_of_finding = datetime.strptime(data.get('date_of_finding'), '%d.%m.%Y')   
+        date_difference = (date_of_finding - date_of_loss)
+        days_difference = date_difference.days
+        print(days_difference)
+
+        radius = get_radius(int(data.get('age')), behavior, int(days_difference))
+    
         return jsonify({
             'status': 'success',
             'distance': distance,
+            'radius': radius,
             'coords_psr': coords_psr,
             'coords_finding': coords_finding,
             'behavior': behavior

@@ -172,6 +172,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
     <script>
         $(document).ready(function () {
+            $('#toggleAdditionalFields').click(function () {
+                $('#additional_fields').toggleClass('hidden-input');
+                if (!$('#additional_fields').hasClass('hidden-input')) {
+                    $('#myTab .nav-link').first().tab('show'); // Показать первую вкладку по умолчанию
+                }
+            });
+
+            // Валидация коэффициентов на вкладке 2
+            $('#tab2 input[type="number"]').on('input', function () {
+                var value = parseFloat($(this).val());
+                if (value < 0 || value > 1) {
+                    alert('Коэффициент должен быть в пределах от 0 до 1');
+                    $(this).val('');
+                }
+            });
+
             $('#dataForm').on('submit', function (e) {
                 e.preventDefault(); // Отключить стандартное поведение отправки формы
 
@@ -214,8 +230,27 @@
                             
                             // Добавляем метку для центра ПСР
                             L.marker([response.coords_psr.latitude, response.coords_psr.longitude]).addTo(map)
-                                .bindPopup('Центр ПСР')
-                                .openPopup();
+                                .bindTooltip('Центр ПСР')
+                                .openTooltip();
+                            
+                            // Добавляем круговой радиус
+                            var radiusInMeters = response.radius * 1000; // если радиус в километрах
+                            L.circle([response.coords_psr.latitude, response.coords_psr.longitude], {
+                                color: 'blue',
+                                fillColor: '#add8e6',
+                                fillOpacity: 0.5,
+                                radius: radiusInMeters
+                            }).addTo(map);
+                            
+                             // Добавляем метку для координат нахождения
+                             if (response.coords_finding) {
+                                L.marker([response.coords_finding.latitude, response.coords_finding.longitude]).addTo(map)
+                                    .bindTooltip('Место нахождения')
+                                    .openTooltip();
+                            } else {
+                                alert('Не удалось получить координаты нахождения.');
+                            }
+
                             document.getElementById('result').innerHTML = response.behavior
                         } else {
                             alert('Не удалось получить координаты.');
