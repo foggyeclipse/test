@@ -2,34 +2,36 @@ from flask import Flask, jsonify, render_template, request
 import pandas as pd
 import math
 from math import radians, cos, sin, sqrt, atan2
+import requests
+from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
 # Загрузка данных из Excel
-file_path = '/Users/katerina/Desktop/СourseWork/EXTR_ORIGINAL.xlsx'
-df = pd.read_excel(file_path, sheet_name=1, skiprows=[1])
+# file_path = '/Users/katerina/Desktop/СourseWork/EXTR_ORIGINAL.xlsx'
+# df = pd.read_excel(file_path, sheet_name=1, skiprows=[1])
 
-# Переименование столбцов для удобства
-df.rename(columns={
-    'Координ.ц.ПСР': 'Координ.ц.ПСР X',
-    df.columns[14]: 'Координ.ц.ПСР Y',
-    'Коорд.нах.': 'Коорд.нах. X',
-    df.columns[57]: 'Коорд.нах. Y',
-}, inplace=True)
+# # Переименование столбцов для удобства
+# df.rename(columns={
+#     'Координ.ц.ПСР': 'Координ.ц.ПСР X',
+#     df.columns[14]: 'Координ.ц.ПСР Y',
+#     'Коорд.нах.': 'Коорд.нах. X',
+#     df.columns[57]: 'Коорд.нах. Y',
+# }, inplace=True)
 
-# Преобразование строк с координатами в числовые значения
-df['Координ.ц.ПСР X'] = df['Координ.ц.ПСР X'].str.replace(',', '.').astype(float)
-df['Координ.ц.ПСР Y'] = df[df.columns[14]].str.replace(',', '.').astype(float)
-df['Коорд.нах. X'] = df['Коорд.нах. X'].str.replace(',', '.').astype(float)
-df['Коорд.нах. Y'] = df[df.columns[57]].str.replace(',', '.').astype(float)
+# # Преобразование строк с координатами в числовые значения
+# df['Координ.ц.ПСР X'] = df['Координ.ц.ПСР X'].str.replace(',', '.').astype(float)
+# df['Координ.ц.ПСР Y'] = df[df.columns[14]].str.replace(',', '.').astype(float)
+# df['Коорд.нах. X'] = df['Коорд.нах. X'].str.replace(',', '.').astype(float)
+# df['Коорд.нах. Y'] = df[df.columns[57]].str.replace(',', '.').astype(float)
 
 # Функция для обработки дат
-def parse_dates(df, column_name):
-    df[column_name] = pd.to_datetime(df[column_name], format='%d.%m.%Y %H:%M:%S', errors='coerce')
-    df[column_name] = df[column_name].fillna(pd.to_datetime(df[column_name], format='%d.%m.%Y', errors='coerce'))
+# def parse_dates(df, column_name):
+#     df[column_name] = pd.to_datetime(df[column_name], format='%d.%m.%Y %H:%M:%S', errors='coerce')
+#     df[column_name] = df[column_name].fillna(pd.to_datetime(df[column_name], format='%d.%m.%Y', errors='coerce'))
 
-parse_dates(df, 'Дата ПСР')
-parse_dates(df, 'Дата завершения')
+# parse_dates(df, 'Дата ПСР')
+# parse_dates(df, 'Дата завершения')
 
 # Функция расчета расстояния
 def haversine(lat1, lon1, lat2, lon2):
@@ -111,16 +113,204 @@ def radius():
         finding_lon = float(coords_finding.get('longitude'))
 
         distance = calculate_distance(psr_lat, psr_lon, finding_lat, finding_lon)
+
+
+        #крот2
+        data_beh = {
+            'Возраст': int(data.get('age')),
+            'Пол': str(data.get('gender')),
+            'Физическое состояние': str(data.get('physical_condition')),
+            'Психическое состояние': str(data.get('mental_condition')),
+            'Опыт нахождения в дикой природе': str(data.get('experience')),
+            'Знание местности': str(data.get('local_knowledge')),
+            'Погодные условия': "unknown",
+            'Наличие телефона': str(data.get('phone')),
+            'Время суток': "unknown",
+            'Моральные обязательства': "unknown",
+            'Внешние сигналы': "unknown"
+        }
+
+        behavior = predict_behavior(data_beh)
+
         return jsonify({
             'status': 'success',
             'distance': distance,
             'coords_psr': coords_psr,
-            'coords_finding': coords_finding
+            'coords_finding': coords_finding,
+            'behavior': behavior
         })
     except ValueError as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
     except Exception as e:
         return jsonify({'status': 'error', 'message': 'Не удалось обработать запрос'}), 500
+    
+
+#крот2
+
+def get_weather_data(date:str):
+    day,month,year = date.split('.')
+    url = f"https://www.gismeteo.ru/diary/4079/{year}/{month}/"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, "html.parser")
+        rows = soup.find_all("tr", align="center")
+
+        for row in rows:
+            cells = row.find_all("td")
+
+            if cells:
+                day_number = cells[0].text.strip()
+
+                if day_number == day:
+                    rain_icon = any("rain" in img["src"] for img in row.find_all("img"))
+
+                    if rain_icon:
+                        print(f"Дата: {day_number} - осадки: дождь")
+                    else:
+                        print(f"Дата: {day_number} - осадков нет")
+                    break
+        else:
+            print("Информация о погоде на 4 число не найдена.")
+    else:
+        print("Ошибка при выполнении запроса. Код состояния:", response.status_code)
+
+def calculate_probability(data):
+    probabilities = {
+        'остаться на месте': 0.0,
+        'двигаться с ориентированием': 0.0,
+        'двигаться без ориентирования': 0.0,
+        'искать укрытие': 0.0
+    }
+
+    age = data.get('Возраст', 30)
+    gender = data.get('Пол', 'Неизвестно')
+    physical_condition = data.get('Физическое состояние', 'Здоров')
+    psychological_condition = data.get('Психическое состояние', 'Устойчив')
+    experience = data.get('Опыт нахождения в дикой природе', 'Низкий')
+    location = data.get('Знание местности', 'Нет')
+    weather = data.get('Погодные условия', 'Хорошие')
+    has_phone = data.get('Наличие телефона', 'Нет')
+    time_of_day = data.get('Время суток', 'День')
+    moral_obligations = data.get('Моральные обязательства', 'Слабые')
+    external_signals = data.get('Внешние сигналы', 'Нет')
+
+    # Корректируем вероятности в зависимости от условий
+    if physical_condition in ['injury', 'health_deterioration']:
+        probabilities['остаться на месте'] += 0.4
+    if psychological_condition == 'unstable':
+        probabilities['двигаться без ориентирования'] += 0.3
+    if location == 'no' or experience == 'low':
+        probabilities['двигаться без ориентирования'] += 0.3
+    if weather == 'bad':
+        probabilities['искать укрытие'] += 0.3
+    if has_phone == 'yes':
+        probabilities['остаться на месте'] += 0.5
+    if time_of_day in ['evening', 'night']:
+        probabilities['искать укрытие'] += 0.4
+    if psychological_condition == 'stable' and moral_obligations == 'strong':
+        probabilities['двигаться с ориентированием'] += 0.4
+    if external_signals == 'yes':
+        probabilities['двигаться с ориентированием'] += 0.3
+    if moral_obligations == 'strong':
+        probabilities['остаться на месте'] += 0.3
+
+    # Корекция относительно возраста
+    if age < 12:
+        probabilities['остаться на месте'] += 0.5
+        probabilities['искать укрытие'] += 0.2
+    elif 12 <= age < 18:
+        probabilities['двигаться без ориентирования'] += 0.4
+    elif age >= 60:
+        probabilities['остаться на месте'] += 0.3
+        probabilities['искать укрытие'] += 0.3
+
+    # Корекция относительно гендера
+    if gender == 'female':
+        probabilities['искать укрытие'] += 0.2
+        probabilities['остаться на месте'] += 0.2
+    elif gender == 'male':
+        probabilities['двигаться с ориентированием'] += 0.2
+        probabilities['двигаться без ориентирования'] += 0.2
+
+    # Нормализуем вероятности
+    total_probability = sum(probabilities.values())
+    for key in probabilities:
+        probabilities[key] /= total_probability
+    
+    return probabilities
+
+def predict_behavior(data):
+    probabilities = calculate_probability(data)
+    # Формируем строку с процентами вероятности
+    probabilities_str = "\n".join([f"{behavior}: {prob * 100:.2f}%" for behavior, prob in probabilities.items()])
+    return probabilities_str
+
+def prompt_user(message, options):
+    print(message)
+    for index, option in enumerate(options, start=1):
+        print(f"{index}: {option}")
+    
+    while True:
+        try:
+            choice_index = int(input()) - 1
+            if 0 <= choice_index < len(options):
+                return options[choice_index]
+            else:
+                print("Некорректный выбор. Пожалуйста, введите номер из предложенных вариантов.")
+        except ValueError:
+            print("Некорректный выбор. Пожалуйста, введите число.")
+
+# def main():
+#     print("Это приложение для предсказания поведения человека, потерявшегося в лесу.")
+    
+#     # Запрос данных у пользователя
+#     age = input("Введите возраст (оставьте пустым, если неизвестно): ")
+#     age = int(age) if age else None
+    
+#     gender = prompt_user("Введите пол (М/Ж, оставьте пустым, если неизвестно): ", ["М", "Ж", "Неизвестно"])
+    
+#     physical_condition = prompt_user("Введите физическое состояние: ", ["Здоров", "Хронические заболевания", "Травма", "Ухудшение здоровья", "Неизвестно"])
+    
+#     psychological_condition = prompt_user("Введите психическое состояние: ", ["Устойчив", "Неустойчив", "Неизвестно"])
+    
+#     experience = prompt_user("Введите опыт нахождения в дикой природе: ", ["Низкий", "Средний", "Высокий", "Неизвестно"])
+    
+#     location = prompt_user("Знание местности: ", ["Да", "Нет", "Неизвестно"])
+    
+#     weather = prompt_user("Погодные условия: ", ["Хорошие", "Плохие", "Неизвестно"])
+    
+#     has_phone = prompt_user("Наличие телефона: ", ["Да", "Нет", "Неизвестно"])
+    
+#     time_of_day = prompt_user("Время суток: ", ["Утро", "День", "Вечер", "Ночь", "Неизвестно"])
+
+#     moral_obligations = prompt_user("Моральные обязательства: ", ["Сильные", "Слабые", "Неизвестно"])
+
+#     external_signals = prompt_user("Внешние сигналы спасения: ", ["Да", "Нет", "Неизвестно"])
+
+#     # Создание словаря с данными
+#     data = {
+#         'Возраст': age,
+#         'Пол': gender,
+#         'Физическое состояние': physical_condition,
+#         'Психическое состояние': psychological_condition,
+#         'Опыт нахождения в дикой природе': experience,
+#         'Знание местности': location,
+#         'Погодные условия': weather,
+#         'Наличие телефона': has_phone,
+#         'Время суток': time_of_day,
+#         'Моральные обязательства': moral_obligations,
+#         'Внешние сигналы': external_signals
+#     }
+    
+#     # Предсказание поведения
+#     behavior = predict_behavior(data)
+#     print("Предсказание поведения: ", behavior)
 
 if __name__ == '__main__':
     app.run(debug=True)
