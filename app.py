@@ -18,15 +18,19 @@ df.rename(columns={
 }, inplace=True)
 
 # Преобразование строк с координатами в числовые значения
-df['Координ.ц.ПСР X'] = df['Координ.ц.ПСР X'].str.replace(',', '.').astype(float)
+df['Координ.ц.ПСР X'] = df['Координ.ц.ПСР X'].str.replace(
+    ',', '.').astype(float)
 df['Координ.ц.ПСР Y'] = df[df.columns[14]].str.replace(',', '.').astype(float)
 df['Коорд.нах. X'] = df['Коорд.нах. X'].str.replace(',', '.').astype(float)
 df['Коорд.нах. Y'] = df[df.columns[57]].str.replace(',', '.').astype(float)
 
 # Функция для обработки дат
 def parse_dates(df, column_name):
-    df[column_name] = pd.to_datetime(df[column_name], format='%d.%m.%Y %H:%M:%S', errors='coerce')
-    df[column_name] = df[column_name].fillna(pd.to_datetime(df[column_name], format='%d.%m.%Y', errors='coerce'))
+    df[column_name] = pd.to_datetime(
+        df[column_name], format='%d.%m.%Y %H:%M:%S', errors='coerce')
+    df[column_name] = df[column_name].fillna(pd.to_datetime(
+        df[column_name], format='%d.%m.%Y', errors='coerce'))
+
 
 parse_dates(df, 'Дата ПСР')
 parse_dates(df, 'Дата завершения')
@@ -36,7 +40,8 @@ def haversine(lat1, lon1, lat2, lon2):
     R = 6371.0  # Радиус Земли в километрах
     dlat = radians(lat2 - lat1)
     dlon = radians(lon1 - lon2)
-    a = sin(dlat / 2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2)**2
+    a = sin(dlat / 2)**2 + cos(radians(lat1)) * \
+        cos(radians(lat2)) * sin(dlon / 2)**2
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     distance = R * c
     return distance * 1000  # Возвращаем расстояние в метрах
@@ -44,7 +49,7 @@ def haversine(lat1, lon1, lat2, lon2):
 # Функция расчета радиуса поиска
 def get_radius(hours_elapsed, terrain_passability=None, path_curvature=None, slope_degree=None, fatigue_level=None, time_of_day=None, weather_conditions=None, group_factor=None):
     normal_speed = 5  # Средняя скорость движения по асфальту в км/ч
-    
+
     # Коэффициенты понижения
     terrain_passability_coefficient = terrain_passability if terrain_passability is not None else 1.0
     path_curvature_coefficient = path_curvature if path_curvature is not None else 1.0
@@ -110,7 +115,8 @@ def radius():
         finding_lat = float(coords_finding.get('latitude'))
         finding_lon = float(coords_finding.get('longitude'))
 
-        distance = calculate_distance(psr_lat, psr_lon, finding_lat, finding_lon)
+        distance = calculate_distance(
+            psr_lat, psr_lon, finding_lat, finding_lon)
         return jsonify({
             'status': 'success',
             'distance': distance,
