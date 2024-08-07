@@ -33,15 +33,17 @@
             <!-- Поля формы -->
             <div class="form-group">
                 <label for="date_of_loss">Дата потери:</label>
-                <input type="text" id="date_of_loss" name="date_of_loss" class="form-control" placeholder="Введите дату потери" required>
+                <input type="text" id="date_of_loss" name="date_of_loss" class="form-control"
+                    placeholder="Введите дату потери" required>
             </div>
             <div class="form-group">
                 <label for="date_of_finding">Дата нахождения:</label>
-                <input type="text" id="date_of_finding" name="date_of_finding" class="form-control" placeholder="Введите дату нахождения" required>
+                <input type="text" id="date_of_finding" name="date_of_finding" class="form-control"
+                    placeholder="Введите дату нахождения" required>
             </div>
             <div class="form-group">
                 <label for="age">Возраст:</label>
-                <input type="number" id="age" name="age" class="form-control">
+                <input type="number" id="age" name="age" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="gender">Пол:</label>
@@ -93,10 +95,12 @@
             <div id="additional_fields" class="hidden-input">
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link active" id="tab1-tab" data-toggle="tab" href="#tab1" role="tab" aria-controls="tab1" aria-selected="true">Данные о потерявшемся</a>
+                        <a class="nav-link active" id="tab1-tab" data-toggle="tab" href="#tab1" role="tab"
+                            aria-controls="tab1" aria-selected="true">Данные о потерявшемся</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="tab2-tab" data-toggle="tab" href="#tab2" role="tab" aria-controls="tab2" aria-selected="false">Данные о местности</a>
+                        <a class="nav-link" id="tab2-tab" data-toggle="tab" href="#tab2" role="tab" aria-controls="tab2"
+                            aria-selected="false">Данные о местности</a>
                     </li>
                 </ul>
                 <div class="tab-content" id="myTabContent">
@@ -130,15 +134,18 @@
                     <div class="tab-pane fade" id="tab2" role="tabpanel" aria-labelledby="tab2-tab">
                         <div class="form-group">
                             <label for="terrain_passability">Проходимость местности:</label>
-                            <input type="number" id="terrain_passability" name="terrain_passability" class="form-control" step="0.01" min="0" max="1" required>
+                            <input type="number" id="terrain_passability" name="terrain_passability"
+                                class="form-control" step="0.01" min="0" max="1">
                         </div>
                         <div class="form-group">
                             <label for="path_curvature">Кривизна местности:</label>
-                            <input type="number" id="path_curvature" name="path_curvature" class="form-control" step="0.01" min="0" max="1" required>
+                            <input type="number" id="path_curvature" name="path_curvature" class="form-control"
+                                step="0.01" min="0" max="1">
                         </div>
                         <div class="form-group">
                             <label for="slope_angle">Угол наклона местности:</label>
-                            <input type="number" id="slope_angle" name="slope_angle" class="form-control" step="0.01" min="0" max="1" required>
+                            <input type="number" id="slope_angle" name="slope_angle" class="form-control" step="0.01"
+                                min="0" max="1">
                         </div>
                     </div>
                 </div>
@@ -165,26 +172,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
     <script>
         $(document).ready(function () {
-            $('#toggleAdditionalFields').click(function () {
-                $('#additional_fields').toggleClass('hidden-input');
-                if (!$('#additional_fields').hasClass('hidden-input')) {
-                    $('#myTab .nav-link').first().tab('show'); // Показать первую вкладку по умолчанию
-                }
-            });
-            
-            // Валидация коэффициентов на вкладке 2
-            $('#tab2 input[type="number"]').on('input', function () {
-                var value = parseFloat($(this).val());
-                if (value < 0 || value > 1) {
-                    alert('Коэффициент должен быть в пределах от 0 до 1');
-                    $(this).val('');
-                }
-            });
-
             $('#dataForm').on('submit', function (e) {
                 e.preventDefault(); // Отключить стандартное поведение отправки формы
 
-                // Собрать данные формы
+                // Собрать данные формы, учитывая необязательные поля
                 var data = {
                     date_of_loss: $('#date_of_loss').val(),
                     date_of_finding: $('#date_of_finding').val(),
@@ -192,12 +183,12 @@
                     gender: $('#gender').val(),
                     physical_condition: $('#physical_condition').val(),
                     mental_condition: $('#mental_condition').val(),
-                    experience: $('#experience').val(),
-                    local_knowledge: $('#local_knowledge').val(),
-                    phone: $('#phone').val(),
-                    terrain_passability: $('#terrain_passability').val(),
-                    path_curvature: $('#path_curvature').val(),
-                    slope_angle: $('#slope_angle').val(),
+                    experience: $('#experience').val() || null,
+                    local_knowledge: $('#local_knowledge').val() || null,
+                    phone: $('#phone').val() || null,
+                    terrain_passability: $('#terrain_passability').val() || null,
+                    path_curvature: $('#path_curvature').val() || null,
+                    slope_angle: $('#slope_angle').val() || null,
                     coords_psr: {
                         latitude: parseFloat($('#psr_lat').val()),
                         longitude: parseFloat($('#psr_lon').val())
@@ -214,13 +205,14 @@
                     contentType: 'application/json',
                     data: JSON.stringify(data),
                     success: function (response) {
-                        console.log('Response:', response);
                         if (response && response.coords_psr) {
                             var map = L.map('map').setView([response.coords_psr.latitude, response.coords_psr.longitude], 13);
                             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                                 maxZoom: 18,
                                 attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             }).addTo(map);
+                            
+                            // Добавляем метку для центра ПСР
                             L.marker([response.coords_psr.latitude, response.coords_psr.longitude]).addTo(map)
                                 .bindPopup('Центр ПСР')
                                 .openPopup();
