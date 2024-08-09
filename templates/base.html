@@ -163,6 +163,10 @@
         <div id="result" class="alert alert-info" role="alert">
             Результат будет отображаться здесь.
         </div>
+
+        <div id="extra_result" class="alert alert-info" role="alert">
+            Результат будет отображаться здесь.
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
@@ -172,6 +176,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
     <script>
         $(document).ready(function () {
+            let mapCreated = false; // Переменная для отслеживания создания карты
+            let map; // Глобальная переменная для карты
+
             $('#toggleAdditionalFields').click(function () {
                 $('#additional_fields').toggleClass('hidden-input');
                 if (!$('#additional_fields').hasClass('hidden-input')) {
@@ -222,11 +229,20 @@
                     data: JSON.stringify(data),
                     success: function (response) {
                         if (response && response.coords_psr) {
-                            var map = L.map('map').setView([response.coords_psr.latitude, response.coords_psr.longitude], 13);
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                maxZoom: 18,
-                                attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            }).addTo(map);
+                            if (!mapCreated) {
+                                map = L.map('map').setView([response.coords_psr.latitude, response.coords_psr.longitude], 13);
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                    maxZoom: 18,
+                                    attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                }).addTo(map);
+                                mapCreated = true;
+                            }
+
+                            map.eachLayer(function (layer) {
+                                if (layer instanceof L.Marker || layer instanceof L.Circle) {
+                                    map.removeLayer(layer);
+                                }
+                            });
                             
                             // Добавляем метку для центра ПСР
                             L.marker([response.coords_psr.latitude, response.coords_psr.longitude]).addTo(map)
@@ -251,7 +267,8 @@
                                 alert('Не удалось получить координаты нахождения.');
                             }
 
-                            document.getElementById('result').innerHTML = response.behavior
+                            document.getElementById('result').innerHTML = response.behavior;
+                            document.getElementById('extra_result').innerHTML = response.extra_info.replace(/  /g, ' <br>');
                         } else {
                             alert('Не удалось получить координаты.');
                         }

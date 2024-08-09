@@ -5,7 +5,7 @@ from math import radians, cos, sin, sqrt, atan2
 import requests
 from bs4 import BeautifulSoup
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -46,15 +46,8 @@ def haversine(lat1, lon1, lat2, lon2):
     distance = R * c
     return distance * 1000  # Возвращаем расстояние в метрах
 
-# Функция расчета радиуса поиска
-def get_radius(age, behavior_data, hours_elapsed, terrain_passability=None, path_curvature=None, slope_degree=None, fatigue_level=None, time_of_day=None, weather_conditions=None, group_factor=None):
-    normal_speed = 5  # Средняя скорость движения по асфальту в км/ч
+def get_behavior_coef(behavior_data):
     behavior_coef = 1
-
-    if age < 18:
-        normal_speed = 4
-    elif age >= 60:
-        normal_speed = 3
 
     # Используем регулярное выражение для поиска всех процентов в строке
     percentages = re.findall(r"(\d+\.\d+)%", behavior_data)
@@ -71,7 +64,48 @@ def get_radius(age, behavior_data, hours_elapsed, terrain_passability=None, path
 
     # Ищем текст с максимальным процентом
     match = re.search(pattern, behavior_data)
-    print(match)
+    result_text = match.group(1).strip()
+    result_text = result_text.split('\n')[1]
+
+    if result_text == "остаться на месте:":
+        behavior_coef = 0
+    elif result_text == "искать укрытие:":
+        behavior_coef = 0.2
+    return behavior_coef, result_text + ' ' + str(max_percentage) + '%'
+
+def get_behavior_data(data, current_time, current_date):
+    if 5 <= current_time < 10:
+        time = "morning"
+    elif 10 <= current_time < 17:
+        time = "day"
+    elif 17 <= current_time < 21:
+        time = "evening"
+    else:
+        time = "night"
+    data_beh = {
+            'Возраст': int(data.get('age')),
+            'Пол': str(data.get('gender')),
+            'Физическое состояние': str(data.get('physical_condition')),
+            'Психическое состояние': str(data.get('mental_condition')),
+            'Опыт нахождения в дикой природе': str(data.get('experience')),
+            'Знание местности': str(data.get('local_knowledge')),
+            'Наличие телефона': str(data.get('phone')),
+            'Время суток': time,
+            'Моральные обязательства': "unknown",
+            'Внешние сигналы': "unknown",
+            'Дата': current_date
+        }
+    return data_beh, time
+
+
+# Функция расчета радиуса поиска
+def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvature=None, slope_degree=None, fatigue_level=None, time_of_day=None, weather_conditions=None, group_factor=None):
+    normal_speed = 5  # Средняя скорость движения по асфальту в км/ч
+
+    if age < 18:
+        normal_speed = 4
+    elif age >= 60:
+        normal_speed = 3
 
     # Коэффициенты понижения
     terrain_passability_coefficient = terrain_passability if terrain_passability is not None else 1.0
@@ -93,19 +127,41 @@ def get_radius(age, behavior_data, hours_elapsed, terrain_passability=None, path
         * group_factor_coefficient
     )
 
-    if match == "остаться на месте":
-        behavior_coef = 0
-    elif match == "искать укрытие":
-        behavior_coef = 0.2
+    # Сумма радиусов для каждых 6 часов
+    list_of_radius = ''
+    total_radius = 0
+    current_date = data.get('date_of_loss')
+    time_passed = 0
+    day = 1
 
-    # Радиус поиска
-    search_radius = (
-        hours_elapsed
-        * normal_speed
-        * speed_index
-        * behavior_coef
-    )
-    return search_radius
+    for i in range(0, hours_elapsed, 6):
+        if(time_passed%24==0 and time_passed!=0):
+            current_date = (datetime.strptime(current_date, '%d.%m.%Y') + timedelta(days=1)).strftime('%d.%m.%Y')
+            time_passed = 0
+            day +=1
+        data_beh, time = get_behavior_data(data, time_passed, current_date)
+        # print(data_beh)
+
+        behavior_data, weather = predict_behavior(data_beh)
+        # print(behavior_data)
+
+        behavior_coef, beh_main = get_behavior_coef(behavior_data)
+
+        # Рассчитываем радиус для каждых 6 часов
+        interval_hours = min(6, hours_elapsed - i)  # Учитываем оставшиеся часы в последнем интервале
+        interval_radius = (
+            interval_hours
+            * normal_speed
+            * speed_index
+            * behavior_coef
+        )
+        total_radius += interval_radius
+        if(time_passed==0):
+            list_of_radius += f'День {day}: '
+        list_of_radius +=' '.join([str(interval_radius), str(beh_main), str(weather), str(time)]) + '  '
+        time_passed += 6
+
+    return total_radius, list_of_radius
 
 @app.route('/')
 def index():
@@ -155,22 +211,21 @@ def radius():
             'Психическое состояние': str(data.get('mental_condition')),
             'Опыт нахождения в дикой природе': str(data.get('experience')),
             'Знание местности': str(data.get('local_knowledge')),
-            'Погодные условия': "unknown",
             'Наличие телефона': str(data.get('phone')),
             'Время суток': "unknown",
             'Моральные обязательства': "unknown",
-            'Внешние сигналы': "unknown"
+            'Внешние сигналы': "unknown",
+            'Дата': data.get('date_of_loss')
         }
 
-        behavior = predict_behavior(data_beh)
+        behavior, _ = predict_behavior(data_beh)
 
         date_of_loss = datetime.strptime(data.get('date_of_loss'), '%d.%m.%Y')
         date_of_finding = datetime.strptime(data.get('date_of_finding'), '%d.%m.%Y')   
         date_difference = (date_of_finding - date_of_loss)
-        days_difference = date_difference.days
-        print(days_difference)
+        days_difference = date_difference.days*24
 
-        radius = get_radius(int(data.get('age')), behavior, int(days_difference))
+        radius, extra_info = get_radius(data, int(data.get('age')), int(days_difference))
     
         return jsonify({
             'status': 'success',
@@ -178,7 +233,8 @@ def radius():
             'radius': radius,
             'coords_psr': coords_psr,
             'coords_finding': coords_finding,
-            'behavior': behavior
+            'behavior': behavior,
+            'extra_info': extra_info
         })
     except ValueError as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
@@ -210,14 +266,14 @@ def get_weather_data(date:str):
 
                 if day_number == day:
                     rain_icon = any("rain" in img["src"] for img in row.find_all("img"))
-
-                    if rain_icon:
-                        print(f"Дата: {day_number} - осадки: дождь")
+                    snow_icon = any("snow" in img["src"] for img in row.find_all("img"))
+                    if rain_icon or snow_icon:
+                        return 'bad'
                     else:
-                        print(f"Дата: {day_number} - осадков нет")
+                        return 'good'
                     break
         else:
-            print("Информация о погоде на 4 число не найдена.")
+            print(f"Информация о погоде на {day} число не найдена.")
     else:
         print("Ошибка при выполнении запроса. Код состояния:", response.status_code)
 
@@ -235,7 +291,7 @@ def calculate_probability(data):
     psychological_condition = data.get('Психическое состояние', 'Устойчив')
     experience = data.get('Опыт нахождения в дикой природе', 'Низкий')
     location = data.get('Знание местности', 'Нет')
-    weather = data.get('Погодные условия', 'Хорошие')
+    weather = get_weather_data(data.get('Дата'))
     has_phone = data.get('Наличие телефона', 'Нет')
     time_of_day = data.get('Время суток', 'День')
     moral_obligations = data.get('Моральные обязательства', 'Слабые')
@@ -284,74 +340,14 @@ def calculate_probability(data):
     for key in probabilities:
         probabilities[key] /= total_probability
     
-    return probabilities
+    return probabilities, weather
 
 def predict_behavior(data):
-    probabilities = calculate_probability(data)
+    probabilities, weather = calculate_probability(data)
     # Формируем строку с процентами вероятности
     probabilities_str = "\n".join([f"{behavior}: {prob * 100:.2f}%" for behavior, prob in probabilities.items()])
-    return probabilities_str
+    return probabilities_str, weather
 
-def prompt_user(message, options):
-    print(message)
-    for index, option in enumerate(options, start=1):
-        print(f"{index}: {option}")
-    
-    while True:
-        try:
-            choice_index = int(input()) - 1
-            if 0 <= choice_index < len(options):
-                return options[choice_index]
-            else:
-                print("Некорректный выбор. Пожалуйста, введите номер из предложенных вариантов.")
-        except ValueError:
-            print("Некорректный выбор. Пожалуйста, введите число.")
-
-# def main():
-#     print("Это приложение для предсказания поведения человека, потерявшегося в лесу.")
-    
-#     # Запрос данных у пользователя
-#     age = input("Введите возраст (оставьте пустым, если неизвестно): ")
-#     age = int(age) if age else None
-    
-#     gender = prompt_user("Введите пол (М/Ж, оставьте пустым, если неизвестно): ", ["М", "Ж", "Неизвестно"])
-    
-#     physical_condition = prompt_user("Введите физическое состояние: ", ["Здоров", "Хронические заболевания", "Травма", "Ухудшение здоровья", "Неизвестно"])
-    
-#     psychological_condition = prompt_user("Введите психическое состояние: ", ["Устойчив", "Неустойчив", "Неизвестно"])
-    
-#     experience = prompt_user("Введите опыт нахождения в дикой природе: ", ["Низкий", "Средний", "Высокий", "Неизвестно"])
-    
-#     location = prompt_user("Знание местности: ", ["Да", "Нет", "Неизвестно"])
-    
-#     weather = prompt_user("Погодные условия: ", ["Хорошие", "Плохие", "Неизвестно"])
-    
-#     has_phone = prompt_user("Наличие телефона: ", ["Да", "Нет", "Неизвестно"])
-    
-#     time_of_day = prompt_user("Время суток: ", ["Утро", "День", "Вечер", "Ночь", "Неизвестно"])
-
-#     moral_obligations = prompt_user("Моральные обязательства: ", ["Сильные", "Слабые", "Неизвестно"])
-
-#     external_signals = prompt_user("Внешние сигналы спасения: ", ["Да", "Нет", "Неизвестно"])
-
-#     # Создание словаря с данными
-#     data = {
-#         'Возраст': age,
-#         'Пол': gender,
-#         'Физическое состояние': physical_condition,
-#         'Психическое состояние': psychological_condition,
-#         'Опыт нахождения в дикой природе': experience,
-#         'Знание местности': location,
-#         'Погодные условия': weather,
-#         'Наличие телефона': has_phone,
-#         'Время суток': time_of_day,
-#         'Моральные обязательства': moral_obligations,
-#         'Внешние сигналы': external_signals
-#     }
-    
-#     # Предсказание поведения
-#     behavior = predict_behavior(data)
-#     print("Предсказание поведения: ", behavior)
 
 if __name__ == '__main__':
     app.run(debug=True)
