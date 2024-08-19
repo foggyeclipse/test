@@ -65,7 +65,7 @@
                 <input type="text" id="date_of_loss" name="date_of_loss" class="form-control"
                     placeholder="Введите дату потери" required>
                 <label for="time_of_loss">Время потери:</label>
-                <input type="time" id="time_of_loss" name="time_of_loss" class="form-control"
+                <input type="time" id="time_of_loss" name="time_of_loss" class="form-control" value="12:00"
                     placeholder="Введите время потери">
             </div>
     
@@ -220,6 +220,12 @@
         const formattedDate = formatDate(currentDate);
         // Устанавливаем значение поля
         document.getElementById('date_of_finding').value = formattedDate;
+
+        // Устанавливаем текущее системное время в поле time_of_finding
+        const hours = String(currentDate.getHours()).padStart(2, '0');
+        const minutes = String(currentDate.getMinutes()).padStart(2, '0');
+        const currentTime = `${hours}:${minutes}`;
+        document.getElementById('time_of_finding').value = currentTime;
 
         $(document).ready(function () {
             let mapCreated = false; // Переменная для отслеживания создания карты
