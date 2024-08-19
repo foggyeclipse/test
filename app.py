@@ -57,15 +57,16 @@ def get_behavior_coef(behavior_data):
 
     # Найдем максимальный процент
     max_percentage = max(percentages)
-
     # Поиск текста с максимальным процентом
     # Используем регулярное выражение для нахождения текста с максимальным процентом
     pattern = rf"([^\d]+)\s*{max_percentage:.2f}%"
-
+    # print(pattern)
     # Ищем текст с максимальным процентом
     match = re.search(pattern, behavior_data)
     result_text = match.group(1).strip()
-    result_text = result_text.split('\n')[1]
+    # print(result_text)
+    if result_text!="остаться на месте:":
+        result_text = result_text.split('%')[1]
 
     if result_text == "остаться на месте:":
         behavior_coef = 0
@@ -133,12 +134,14 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
     current_date = data.get('date_of_loss')
     time_passed = 0
     day = 1
+    prev_radius = []
 
     for i in range(0, hours_elapsed, 6):
         if(time_passed%24==0 and time_passed!=0):
             current_date = (datetime.strptime(current_date, '%d.%m.%Y') + timedelta(days=1)).strftime('%d.%m.%Y')
             time_passed = 0
             day +=1
+            prev_radius.append(total_radius)
         data_beh, time = get_behavior_data(data, time_passed, current_date)
         # print(data_beh)
 
@@ -146,9 +149,12 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
         # print(behavior_data)
 
         behavior_coef, beh_main = get_behavior_coef(behavior_data)
+        print(behavior_coef)
+        # print(interval_hours)
 
         # Рассчитываем радиус для каждых 6 часов
         interval_hours = min(6, hours_elapsed - i)  # Учитываем оставшиеся часы в последнем интервале
+        print(interval_hours)
         interval_radius = (
             interval_hours
             * normal_speed
@@ -156,12 +162,14 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
             * behavior_coef
         )
         total_radius += interval_radius
+        print(interval_radius)
+
         if(time_passed==0):
             list_of_radius += f'День {day}: '
         list_of_radius +=' '.join([str(interval_radius), str(beh_main), str(weather), str(time)]) + '  '
         time_passed += 6
-
-    return total_radius, list_of_radius
+    print(total_radius)
+    return total_radius, list_of_radius, prev_radius
 
 @app.route('/')
 def index():
@@ -186,24 +194,85 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     distance = R * c
     return distance
 
+# @app.route('/radius', methods=['POST'])
+# def radius():
+#     data = request.get_json()
+#     try:
+#         coords_psr = data.get('coords_psr')
+#         # coords_finding = data.get('coords_finding')
+#         # if not coords_psr or not coords_finding:
+#         #     raise ValueError('Недостаточно данных')
+
+#         psr_lat = float(coords_psr.get('latitude'))
+#         psr_lon = float(coords_psr.get('longitude'))
+#         # finding_lat = float(coords_finding.get('latitude'))
+#         # finding_lon = float(coords_finding.get('longitude'))
+
+#         # distance = calculate_distance(psr_lat, psr_lon, finding_lat, finding_lon)
+
+
+#         #крот2
+#         data_beh = {
+#             'Возраст': int(data.get('age')),
+#             'Пол': str(data.get('gender')),
+#             'Физическое состояние': str(data.get('physical_condition')),
+#             'Психическое состояние': str(data.get('mental_condition')),
+#             'Опыт нахождения в дикой природе': str(data.get('experience')),
+#             'Знание местности': str(data.get('local_knowledge')),
+#             'Наличие телефона': str(data.get('phone')),
+#             'Время суток': "unknown",
+#             'Моральные обязательства': "unknown",
+#             'Внешние сигналы': "unknown",
+#             'Дата': data.get('date_of_loss')
+#         }
+
+#         behavior, _ = predict_behavior(data_beh)
+
+#         date_of_loss = datetime.strptime(data.get('date_of_loss'), '%d.%m.%Y')
+#         date_of_finding = datetime.strptime(data.get('date_of_finding'), '%d.%m.%Y')   
+#         date_difference = (date_of_finding - date_of_loss)
+#         days_difference = date_difference.days*24
+
+#         radius, extra_info, prev_radius = get_radius(data, int(data.get('age')), int(days_difference))
+
+#         return jsonify({
+#             'status': 'success',
+#             # 'distance': distance,
+#             'radius': radius,
+#             'coords_psr': coords_psr,
+#             # 'coords_finding': coords_finding,
+#             'behavior': behavior,
+#             'extra_info': extra_info,
+#             'prev_radius': prev_radius
+#         })
+#     except ValueError as e:
+#         return jsonify({'status': 'error', 'message': str(e)}), 400
+#     except Exception as e:
+#         return jsonify({'status': 'error', 'message': 'Не удалось обработать запрос'}), 500
+
 @app.route('/radius', methods=['POST'])
 def radius():
     data = request.get_json()
     try:
         coords_psr = data.get('coords_psr')
         coords_finding = data.get('coords_finding')
-        if not coords_psr or not coords_finding:
-            raise ValueError('Недостаточно данных')
 
-        psr_lat = float(coords_psr.get('latitude'))
-        psr_lon = float(coords_psr.get('longitude'))
-        finding_lat = float(coords_finding.get('latitude'))
-        finding_lon = float(coords_finding.get('longitude'))
+        # psr_lat = float(coords_psr.get('latitude'))
+        # psr_lon = float(coords_psr.get('longitude'))
 
-        distance = calculate_distance(psr_lat, psr_lon, finding_lat, finding_lon)
+        # Обработка полей даты и времени
+        date_of_loss_str = data.get('date_of_loss')
+        time_of_loss_str = data.get('time_of_loss', '00:00')  # Значение по умолчанию
 
+        date_of_finding_str = data.get('date_of_finding')
+        time_of_finding_str = data.get('time_of_finding', '00:00')  # Значение по умолчанию
 
-        #крот2
+        # Конкатенация даты и времени в одну строку
+        date_time_of_loss_str = f"{date_of_loss_str} {time_of_loss_str}"
+        date_time_of_finding_str = f"{date_of_finding_str} {time_of_finding_str}"
+
+        
+        # Пример обработки данных
         data_beh = {
             'Возраст': int(data.get('age')),
             'Пол': str(data.get('gender')),
@@ -220,33 +289,55 @@ def radius():
 
         behavior, _ = predict_behavior(data_beh)
 
-        date_of_loss = datetime.strptime(data.get('date_of_loss'), '%d.%m.%Y')
-        date_of_finding = datetime.strptime(data.get('date_of_finding'), '%d.%m.%Y')   
-        date_difference = (date_of_finding - date_of_loss)
-        days_difference = date_difference.days*24
+        # Преобразование строк в объекты datetime
+        date_time_of_loss = datetime.strptime(date_time_of_loss_str, '%d.%m.%Y %H:%M')
+        date_time_of_finding = datetime.strptime(date_time_of_finding_str, '%d.%m.%Y %H:%M')
 
-        radius, extra_info = get_radius(data, int(data.get('age')), int(days_difference))
-    
+        # Разница во времени
+        date_difference = date_time_of_finding - date_time_of_loss
+        hours_difference = date_difference.total_seconds() // 3600  # Разница в часах
+        print(hours_difference)
+
+        # # Пример обработки данных
+        # data_beh = {
+        #     'Возраст': int(data.get('age')),
+        #     'Пол': str(data.get('gender')),
+        #     'Физическое состояние': str(data.get('physical_condition')),
+        #     'Психическое состояние': str(data.get('mental_condition')),
+        #     'Опыт нахождения в дикой природе': str(data.get('experience')),
+        #     'Знание местности': str(data.get('local_knowledge')),
+        #     'Наличие телефона': str(data.get('phone')),
+        #     'Время суток': "unknown",
+        #     'Моральные обязательства': "unknown",
+        #     'Внешние сигналы': "unknown",
+        #     'Дата': data.get('date_of_loss')
+        # }
+
+        # behavior, _ = predict_behavior(data_beh)
+
+        # Вызов функции для получения радиуса
+        radius, extra_info, prev_radius = get_radius(data, int(data.get('age')), int(hours_difference))
+
         return jsonify({
             'status': 'success',
-            'distance': distance,
             'radius': radius,
             'coords_psr': coords_psr,
             'coords_finding': coords_finding,
             'behavior': behavior,
-            'extra_info': extra_info
+            'extra_info': extra_info,
+            'prev_radius': prev_radius
         })
     except ValueError as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
     except Exception as e:
         return jsonify({'status': 'error', 'message': 'Не удалось обработать запрос'}), 500
-    
 
 #крот2
 
 def get_weather_data(date:str):
     day,month,year = date.split('.')
     url = f"https://www.gismeteo.ru/diary/4079/{year}/{month}/"
+    # url = f"https://arhivpogodi.ru/arhiv/sankt-peterburg/2024/02
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
         "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -339,7 +430,6 @@ def calculate_probability(data):
     total_probability = sum(probabilities.values())
     for key in probabilities:
         probabilities[key] /= total_probability
-    
     return probabilities, weather
 
 def predict_behavior(data):
