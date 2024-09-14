@@ -66,8 +66,8 @@ def get_behavior_coef(behavior_data):
     result_text = match.group(1).strip()
     # print(result_text)
     if result_text!="остаться на месте:":
-        result_text = result_text.split('%')[1]
-
+        result_text = result_text.split('%')[1].split('\n')[1]
+    print(result_text)
     if result_text == "остаться на месте:":
         behavior_coef = 0
     elif result_text == "искать укрытие:":
@@ -83,6 +83,10 @@ def get_behavior_data(data, current_time, current_date):
         time = "evening"
     else:
         time = "night"
+    if 0<=current_time<10:
+        current_time=f'0{current_time}'
+
+    print(current_time)
     data_beh = {
             'Возраст': int(data.get('age')),
             'Пол': str(data.get('gender')),
@@ -94,7 +98,8 @@ def get_behavior_data(data, current_time, current_date):
             'Время суток': time,
             'Моральные обязательства': "unknown",
             'Внешние сигналы': "unknown",
-            'Дата': current_date
+            'Дата': current_date,
+            'Время': f'{current_time}:00'
         }
     return data_beh, time
 
@@ -130,13 +135,31 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
 
     # Сумма радиусов для каждых 6 часов
     list_of_radius = ''
-    total_radius = 0
+    total_radius = 6
     current_date = data.get('date_of_loss')
-    time_passed = 0
+    def round_to_nearest_multiple_of_6(n):
+        if n < 0 or n > 24:
+            raise ValueError("Число должно быть в диапазоне от 0 до 24")
+
+        lower = (n // 6) * 6  # ближайшее кратное 6 вниз
+        upper = lower + 6      # ближайшее кратное 6 вверх
+
+        # Если верхняя граница превышает 24, оставляем только нижнюю
+        if upper > 24:
+            return lower
+
+        # Возвращаем ближайшее из двух кратных
+        if (n - lower) < (upper - n):
+            return lower
+        else:
+            return upper
+    time_passed = round_to_nearest_multiple_of_6(int(data.get('time_of_loss').split(':')[0]))
     day = 1
     prev_radius = []
+    first_day=True
+    print(time_passed)
 
-    for i in range(0, hours_elapsed, 6):
+    for i in range(6, hours_elapsed, 6):
         if(time_passed%24==0 and time_passed!=0):
             current_date = (datetime.strptime(current_date, '%d.%m.%Y') + timedelta(days=1)).strftime('%d.%m.%Y')
             time_passed = 0
@@ -154,7 +177,7 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
 
         # Рассчитываем радиус для каждых 6 часов
         interval_hours = min(6, hours_elapsed - i)  # Учитываем оставшиеся часы в последнем интервале
-        print(interval_hours)
+        # print(interval_hours)
         interval_radius = (
             interval_hours
             * normal_speed
@@ -164,8 +187,9 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
         total_radius += interval_radius
         print(interval_radius)
 
-        if(time_passed==0):
+        if(time_passed==0 or first_day):
             list_of_radius += f'День {day}: '
+            first_day=False
         list_of_radius +=' '.join([str(interval_radius), str(beh_main), str(weather), str(time)]) + '  '
         time_passed += 6
     print(total_radius)
@@ -194,62 +218,6 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     distance = R * c
     return distance
 
-# @app.route('/radius', methods=['POST'])
-# def radius():
-#     data = request.get_json()
-#     try:
-#         coords_psr = data.get('coords_psr')
-#         # coords_finding = data.get('coords_finding')
-#         # if not coords_psr or not coords_finding:
-#         #     raise ValueError('Недостаточно данных')
-
-#         psr_lat = float(coords_psr.get('latitude'))
-#         psr_lon = float(coords_psr.get('longitude'))
-#         # finding_lat = float(coords_finding.get('latitude'))
-#         # finding_lon = float(coords_finding.get('longitude'))
-
-#         # distance = calculate_distance(psr_lat, psr_lon, finding_lat, finding_lon)
-
-
-#         #крот2
-#         data_beh = {
-#             'Возраст': int(data.get('age')),
-#             'Пол': str(data.get('gender')),
-#             'Физическое состояние': str(data.get('physical_condition')),
-#             'Психическое состояние': str(data.get('mental_condition')),
-#             'Опыт нахождения в дикой природе': str(data.get('experience')),
-#             'Знание местности': str(data.get('local_knowledge')),
-#             'Наличие телефона': str(data.get('phone')),
-#             'Время суток': "unknown",
-#             'Моральные обязательства': "unknown",
-#             'Внешние сигналы': "unknown",
-#             'Дата': data.get('date_of_loss')
-#         }
-
-#         behavior, _ = predict_behavior(data_beh)
-
-#         date_of_loss = datetime.strptime(data.get('date_of_loss'), '%d.%m.%Y')
-#         date_of_finding = datetime.strptime(data.get('date_of_finding'), '%d.%m.%Y')   
-#         date_difference = (date_of_finding - date_of_loss)
-#         days_difference = date_difference.days*24
-
-#         radius, extra_info, prev_radius = get_radius(data, int(data.get('age')), int(days_difference))
-
-#         return jsonify({
-#             'status': 'success',
-#             # 'distance': distance,
-#             'radius': radius,
-#             'coords_psr': coords_psr,
-#             # 'coords_finding': coords_finding,
-#             'behavior': behavior,
-#             'extra_info': extra_info,
-#             'prev_radius': prev_radius
-#         })
-#     except ValueError as e:
-#         return jsonify({'status': 'error', 'message': str(e)}), 400
-#     except Exception as e:
-#         return jsonify({'status': 'error', 'message': 'Не удалось обработать запрос'}), 500
-
 @app.route('/radius', methods=['POST'])
 def radius():
     data = request.get_json()
@@ -257,7 +225,7 @@ def radius():
         coords_psr = data.get('coords_psr')
         coords_finding = data.get('coords_finding')
 
-        # psr_lat = float(coords_psr.get('latitude'))
+        # psr_lat = float('.'.join(coords_psr.get('latitude').split(',')))
         # psr_lon = float(coords_psr.get('longitude'))
 
         # Обработка полей даты и времени
@@ -284,7 +252,8 @@ def radius():
             'Время суток': "unknown",
             'Моральные обязательства': "unknown",
             'Внешние сигналы': "unknown",
-            'Дата': data.get('date_of_loss')
+            'Дата': data.get('date_of_loss'),
+            'Время': time_of_loss_str
         }
 
         behavior, _ = predict_behavior(data_beh)
@@ -298,22 +267,6 @@ def radius():
         hours_difference = date_difference.total_seconds() // 3600  # Разница в часах
         print(hours_difference)
 
-        # # Пример обработки данных
-        # data_beh = {
-        #     'Возраст': int(data.get('age')),
-        #     'Пол': str(data.get('gender')),
-        #     'Физическое состояние': str(data.get('physical_condition')),
-        #     'Психическое состояние': str(data.get('mental_condition')),
-        #     'Опыт нахождения в дикой природе': str(data.get('experience')),
-        #     'Знание местности': str(data.get('local_knowledge')),
-        #     'Наличие телефона': str(data.get('phone')),
-        #     'Время суток': "unknown",
-        #     'Моральные обязательства': "unknown",
-        #     'Внешние сигналы': "unknown",
-        #     'Дата': data.get('date_of_loss')
-        # }
-
-        # behavior, _ = predict_behavior(data_beh)
 
         # Вызов функции для получения радиуса
         radius, extra_info, prev_radius = get_radius(data, int(data.get('age')), int(hours_difference))
@@ -334,34 +287,91 @@ def radius():
 
 #крот2
 
-def get_weather_data(date:str):
-    day,month,year = date.split('.')
-    url = f"https://www.gismeteo.ru/diary/4079/{year}/{month}/"
-    # url = f"https://arhivpogodi.ru/arhiv/sankt-peterburg/2024/02
+def get_weather_data(date, time):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
         "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
     }
+    day,month,year = date.split('.')
+    hour = time.split(':')[0]
+    print(day,month,year,hour)
+
+    url = f"https://arhivpogodi.ru/arhiv/sankt-peterburg/{year}/{month}/"
 
     response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, "html.parser")
-        rows = soup.find_all("tr", align="center")
+        
+        date_blocks = soup.find_all('div', class_='font-size-unset d-inline-block position-sticky px-3 pb-2')
+        holydate_blocks = soup.find_all('div', class_='font-size-unset d-inline-block position-sticky px-3 pb-2 text-danger')
+        day_pattern = rf',\s*{day}\b'
+    # Параметры поиска
+        target_day_found = False
+        target_temperature = None
+        
+        for date_block in date_blocks:
+            date_text = date_block.get_text(strip=True)
+            # print(date_text)
+            # print(date_block)
+            if re.search(day_pattern, date_text):   # Проверяем, начинается ли текст с числа дня
+                # print('yes')
+                target_day_found = True
+                # Найти все блоки с температурой для этого дня
+                hourly_blocks = date_block.find_parent('div').find_next_sibling().find_all('div', class_='d-inline-block')
+                # print(hourly_blocks)
+                for hour_block in hourly_blocks:
+                    hour_text = hour_block.find('div', class_='text-center font-size-unset px-1 border-bottom').get_text(strip=True)
+                    if hour_text == hour:
+                        # print('yes??')
+                        # Найти температуру в этом блоке
+                        rain_block = hour_block.find('div', class_='text-center font-size-unset px-1').find('img')
+                        # print(rain_block['src'])
+                        temp_block = hour_block.find('div', class_='border-bottom border-top').find('span', class_='text-danger fw-bold')
+                        if rain_block:
+                            if rain_block['src'] == '/images/09n.png' or rain_block['src'] == '/images/09d.png' or rain_block['src'] == '/images/10n.png' or rain_block['src'] == '/images/10d.png' or rain_block['src'] == '/images/50n.png':
+                                # print(1)
+                                return 'bad'
+                            else:
+                                # print(2)
+                                return 'good'
+                                # print("Oi Oi Huighy 'Omlender done kill me wife and tok me bloody son Womp Womp")
+                            # target_temperature = temp_block.get_text(strip=True)
+                            # print(target_temperature)
+                        break
 
-        for row in rows:
-            cells = row.find_all("td")
+        
+        for date_block in holydate_blocks:
+            date_text = date_block.get_text(strip=True)
+            # print(date_text)
+            # print(date_block)
+            if re.search(day_pattern, date_text):   # Проверяем, начинается ли текст с числа дня
+                # print('yes')
+                target_day_found = True
+                # Найти все блоки с температурой для этого дня
+                hourly_blocks = date_block.find_parent('div').find_next_sibling().find_all('div', class_='d-inline-block')
+                # print(hourly_blocks)
+                for hour_block in hourly_blocks:
+                    hour_text = hour_block.find('div', class_='text-center font-size-unset px-1 border-bottom').get_text(strip=True)
+                    if hour_text == hour:
+                        # print('yes??')
+                        # Найти температуру в этом блоке
+                        rain_block = hour_block.find('div', class_='text-center font-size-unset px-1').find('img')
+                        # print(rain_block['src'])
+                        temp_block = hour_block.find('div', class_='border-bottom border-top').find('span', class_='text-danger fw-bold')
+                        if rain_block:
+                            if rain_block['src'] == '/images/09n.png' or rain_block['src'] == '/images/09d.png' or rain_block['src'] == '/images/10n.png' or rain_block['src'] == '/images/10d.png' or rain_block['src'] == '/images/50n.png':
+                                # print(11)
+                                return 'bad'
+                            else:
+                                # print(22)
+                                return 'good'
+                                # print("Oi Oi Huighy 'Omlender done kill me wife and tok me bloody son Womp Womp")
+                            # target_temperature = temp_block.get_text(strip=True)
+                            # print(target_temperature)
+                        break
 
-            if cells:
-                day_number = cells[0].text.strip()
-
-                if day_number == day:
-                    rain_icon = any("rain" in img["src"] for img in row.find_all("img"))
-                    snow_icon = any("snow" in img["src"] for img in row.find_all("img"))
-                    if rain_icon or snow_icon:
-                        return 'bad'
-                    else:
-                        return 'good'
+                if target_temperature:
                     break
         else:
             print(f"Информация о погоде на {day} число не найдена.")
@@ -382,7 +392,7 @@ def calculate_probability(data):
     psychological_condition = data.get('Психическое состояние', 'Устойчив')
     experience = data.get('Опыт нахождения в дикой природе', 'Низкий')
     location = data.get('Знание местности', 'Нет')
-    weather = get_weather_data(data.get('Дата'))
+    weather = get_weather_data(data.get('Дата'), data.get('Время'))
     has_phone = data.get('Наличие телефона', 'Нет')
     time_of_day = data.get('Время суток', 'День')
     moral_obligations = data.get('Моральные обязательства', 'Слабые')

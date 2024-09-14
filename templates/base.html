@@ -19,12 +19,12 @@
             margin-left: 20px;
             padding: 5px;
         }
-        .activity.good {
+        /* .activity.good {
             color: green;
         }
         .activity.bad {
             color: red;
-        }
+        } */
     </style>
     <style>
         .form-group {
@@ -220,6 +220,10 @@
         const formattedDate = formatDate(currentDate);
         // Устанавливаем значение поля
         document.getElementById('date_of_finding').value = formattedDate;
+        console.log($('#psr_lat').val())
+        function parseCoordinate(coord) {
+            return parseFloat(coord.replace(',', '.'));
+        }
 
         $(document).ready(function () {
             let mapCreated = false; // Переменная для отслеживания создания карты
@@ -260,13 +264,14 @@
                     terrain_passability: $('#terrain_passability').val() || null,
                     path_curvature: $('#path_curvature').val() || null,
                     slope_angle: $('#slope_angle').val() || null,
+                    
                     coords_psr: {
-                        latitude: parseFloat($('#psr_lat').val()),
-                        longitude: parseFloat($('#psr_lon').val())
+                        latitude: parseCoordinate($('#psr_lat').val()),
+                        longitude: parseCoordinate($('#psr_lon').val())
                     },
                     coords_finding: {
-                        latitude: parseFloat($('#finding_lat').val()),
-                        longitude: parseFloat($('#finding_lon').val())
+                        latitude: parseCoordinate($('#finding_lat').val()),
+                        longitude: parseCoordinate($('#finding_lon').val())
                     }
                 };
 
@@ -406,6 +411,7 @@
                                 });
                             }
                             generateReportFromText(response.extra_info.replace(/  /g, ' <br>'));
+                            console.log(response.extra_info);
                             
                         } else {
                             alert('Не удалось получить координаты.');
