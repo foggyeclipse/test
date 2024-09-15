@@ -75,16 +75,16 @@ def get_behavior_coef(behavior_data):
     return behavior_coef, result_text + ' ' + str(max_percentage) + '%'
 
 def get_behavior_data(data, current_time, current_date):
-    if 5 <= current_time < 10:
+    if 6 <= current_time < 12:
         time = "morning"
-    elif 10 <= current_time < 17:
+    elif 12 <= current_time < 18:
         time = "day"
-    elif 17 <= current_time < 21:
+    elif 18 <= current_time < 24:
         time = "evening"
     else:
         time = "night"
-    if 0<=current_time<10:
-        current_time=f'0{current_time}'
+    if 0 <= current_time < 10:
+        current_time = f'0{current_time}'
 
     print(current_time)
     data_beh = {
@@ -135,7 +135,7 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
 
     # Сумма радиусов для каждых 6 часов
     list_of_radius = ''
-    total_radius = 6
+    total_radius = 0
     current_date = data.get('date_of_loss')
     def round_to_nearest_multiple_of_6(n):
         if n < 0 or n > 24:
@@ -159,7 +159,8 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
     first_day=True
     print(time_passed)
 
-    for i in range(6, hours_elapsed, 6):
+    for i in range(0, hours_elapsed, 6):
+        # if time_passed!=0:
         if(time_passed%24==0 and time_passed!=0):
             current_date = (datetime.strptime(current_date, '%d.%m.%Y') + timedelta(days=1)).strftime('%d.%m.%Y')
             time_passed = 0
@@ -194,7 +195,7 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
         time_passed += 6
     print(total_radius)
     return total_radius, list_of_radius, prev_radius
-
+    
 @app.route('/')
 def index():
     return render_template('base.html')

@@ -50,6 +50,51 @@
         .form-group {
             margin-bottom: 15px;
         }
+        /* Стиль для оверлея */
+        .overlay {
+            display: none; /* Скрыт по умолчанию */
+            position: fixed; /* Фиксированное позиционирование для покрытия всего экрана */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8); /* Белый полупрозрачный фон */
+            z-index: 1000; /* Над всеми другими элементами */
+        }
+        .loader {
+            display: none;
+            position: fixed; /* Фиксированное позиционирование для центрирования */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Центрирование по горизонтали и вертикали */
+            z-index: 1001; /* Над оверлеем */
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border: .25em solid #007bff; 
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner-border .75s linear infinite;
+        }
+
+        /* @keyframes spinner-border {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        } */
+        /* .loader {
+            display: none;
+            position: absolute;
+            top: 154%;
+            left: 56%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        .loader .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        } */
         #map {
             height: 500px;
         }
@@ -190,6 +235,13 @@
             <div class="form-group text-center">
                 <button type="submit" class="btn btn-primary">Отправить</button>
             </div>
+
+            <!-- Оверлей для полупрозрачного фона -->
+            <div class="overlay" id="overlay"></div>
+            <!-- Индикатор загрузки -->
+            <div class="loader" id="loader">
+                <div class="spinner-border"></div>
+            </div>
         </form>
 
         <!-- Место для карты -->
@@ -205,6 +257,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
     <script>
         function formatDate(date) {
@@ -253,6 +306,9 @@
 
             $('#dataForm').on('submit', function (e) {
                 e.preventDefault(); // Отключить стандартное поведение отправки формы
+                
+                $('#overlay').show(); // Показать полупрозрачный фон
+                $('#loader').show(); // Показать индикатор загрузки
 
                 // Собрать данные формы, учитывая необязательные поля
                 var data = {
@@ -270,7 +326,6 @@
                     terrain_passability: $('#terrain_passability').val() || null,
                     path_curvature: $('#path_curvature').val() || null,
                     slope_angle: $('#slope_angle').val() || null,
-                    
                     coords_psr: {
                         latitude: parseCoordinate($('#psr_lat').val()),
                         longitude: parseCoordinate($('#psr_lon').val())
@@ -380,6 +435,9 @@
                             }
                             document.getElementById('result').classList.add('alert', 'alert-info')
                             document.getElementById('result').innerHTML = response.behavior.replace(/%/g, '%  <br>');
+
+                            $('#loader').hide(); // Скрыть индикатор загрузки после получения ответа
+                            $('#overlay').hide(); // Скрыть полупрозрачный фон
                             // document.getElementById('extra_result').innerHTML = response.extra_info.replace(/  /g, ' <br>');
                             function generateReportFromText(text) {
                                 const container = document.getElementById('report');
@@ -387,44 +445,154 @@
 
                                 // Разделение текста по дням
                                 const days = text.split(/(?=День \d+:)/g);
+                                // Получение значений времени из элементов
+                                const timeOfLossInput = document.getElementById('time_of_loss');
+                                const time_of_loss_1 = timeOfLossInput.value;
 
-                                days.forEach(day => {
-                                    // Определение номера дня
-                                    const dayMatch = day.match(/День (\d+):/);
-                                    if (dayMatch) {
-                                        const dayNumber = dayMatch[1];
-                                        const dayDiv = document.createElement('div');
-                                        dayDiv.className = 'day';
-                                        dayDiv.innerHTML = `<strong>День ${dayNumber}:</strong>`;
+                                const timeOfFindingInput = document.getElementById('time_of_finding');
+                                const time_of_finding_1 = timeOfFindingInput.value;
+                                days.forEach((day, dayIndex) => {
+                                // Определение номера дня
+                                const dayMatch = day.match(/День (\d+):/);
+                                if (dayMatch) {
+                                    const dayNumber = dayMatch[1];
+                                    const dayDiv = document.createElement('div');
+                                    dayDiv.className = 'day';
+                                    dayDiv.innerHTML = `<strong>День ${dayNumber}:</strong>`;
 
-                                        // Извлечение активностей
-                                        const activities = day.replace(/День \d+: /, '').trim().split(/(?=\d+\.\d+ \S+:\s\d+\.\d+% \S+)/g);
+                                    // Извлечение активностей с помощью точного регулярного выражения
+                                    const activities = day.replace(/День \d+: /, '').trim().match(/\d+\.\d+ [^:]+: \d+\.\d+% [^ ]+ (morning|day|evening|night)/g);
 
-                                        activities.forEach(activity => {
-                                            // const activityDiv = document.createElement('div');
-                                            const statusMatch = activity.match(/(\bgood\b|\bbad\b)/);
-                                            const status = statusMatch ? statusMatch[0] : 'neutral';
-                                            const activityHtml = `<div class="activity ${status}">${activity.trim()}</div><br>`;
-                                            dayDiv.innerHTML += activityHtml; // Добавление активности с переносом строки
-                    
-                                            // activityDiv.className = `activity ${status}`;
-                                            // activityDiv.textContent = activity.trim();
-                                            // dayDiv.appendChild(activityDiv);
+                                    if (activities) {
+                                        activities.forEach((activity, activityIndex) => {
+                                            if (activity.trim() !== '') {
+                                                // Извлечение статуса активности (good, bad, neutral)
+                                                const statusMatch = activity.match(/(\bgood\b|\bbad\b)/);
+                                                const status = statusMatch ? statusMatch[0] : 'neutral';
+
+                                                // Извлечение части дня (morning, day, evening, night)
+                                                const timeOfDayMatch = activity.match(/\b(morning|day|evening|night)\b/);
+                                                const timeOfDay = timeOfDayMatch ? timeOfDayMatch[0] : 'day';
+
+                                                // Определение временного диапазона для каждой части дня
+                                                let timeRange;
+                                                if (dayIndex === 0 && activityIndex === 0) {
+                                                    // Если это первый день и первая активность
+                                                    switch (timeOfDay) {
+                                                        case 'morning':
+                                                            timeRange = `с ${time_of_loss_1} до 11:59`;
+                                                            break;
+                                                        case 'day':
+                                                            timeRange = `с ${time_of_loss_1} до 17:59`;
+                                                            break;
+                                                        case 'evening':
+                                                            timeRange = `с ${time_of_loss_1} до 23:59`;
+                                                            break;
+                                                        case 'night':
+                                                            timeRange = `с ${time_of_loss_1} до 05:59`;
+                                                            break;
+                                                    }
+                                                } else if (dayIndex === days.length - 1 && activityIndex === activities.length - 1) {
+                                                    // Если это последний день и последняя активность
+                                                    switch (timeOfDay) {
+                                                        case 'morning':
+                                                            timeRange = `с 06:00 до ${time_of_finding_1}`;
+                                                            break;
+                                                        case 'day':
+                                                            timeRange = `с 12:00 до ${time_of_finding_1}`;
+                                                            break;
+                                                        case 'evening':
+                                                            timeRange = `с 18:00 до ${time_of_finding_1}`;
+                                                            break;
+                                                        case 'night':
+                                                            timeRange = `с 00:00 до ${time_of_finding_1}`;
+                                                            break;
+                                                    }
+                                                } else {
+                                                    // Обычные временные интервалы для остальных случаев
+                                                    switch (timeOfDay) {
+                                                        case 'morning':
+                                                            timeRange = 'с 06:00 до 11:59';
+                                                            break;
+                                                        case 'day':
+                                                            timeRange = 'с 12:00 до 17:59';
+                                                            break;
+                                                        case 'evening':
+                                                            timeRange = 'с 18:00 до 23:59';
+                                                            break;
+                                                        case 'night':
+                                                            timeRange = 'с 00:00 до 05:59';
+                                                            break;
+                                                    }
+                                                }
+                                                // switch (timeOfDay) {
+                                                //     case 'morning':
+                                                //         if (dayIndex === 0 && activityIndex === 0) {
+                                                //             timeRange = `с ${time_of_loss_1} до 11:59`;
+            
+                                                //         }
+                                                //         if (dayIndex === days.length - 1 && activityIndex === activities.length - 1) {
+                                                //         timeRange = `с 06:00 до ${time_of_finding_1}`;
+                                                //         }
+                                                //         else
+                                                //             timeRange = 'с 06:00 до 11:59'; // Утро
+                                                //         break;
+                                                //     case 'day':
+                                                //         if (dayIndex === 0 && activityIndex === 0) {
+                                                //             timeRange = `с ${time_of_loss_1} до 17:59`;
+                                                //         }
+                                                //         if (dayIndex === days.length - 1 && activityIndex === activities.length - 1) {
+                                                //         timeRange = `с 12:00 до ${time_of_finding_1}`;
+                                                //         }
+                                                //         else
+                                                //             timeRange = 'с 12:00 до 17:59'; // День
+                                                //         break;
+                                                //     case 'evening':
+                                                //         if (dayIndex === 0 && activityIndex === 0) {
+                                                //             timeRange = `с ${time_of_loss_1} до 23:59`;
+                                                //             }
+                                                //         if (dayIndex === days.length - 1 && activityIndex === activities.length - 1) {
+                                                //             timeRange = `с 18:00 до ${time_of_finding_1}`;
+                                                //         }
+                                                //         else
+                                                //             timeRange = 'с 18:00 до 23:59'; // Вечер
+                                                //             break;
+                                                //     case 'night':
+                                                //         if (dayIndex === 0 && activityIndex === 0) {
+                                                //             timeRange = `с ${time_of_loss_1} до 05:59`;
+                                                //             }
+                                                //         if (dayIndex === days.length - 1 && activityIndex === activities.length - 1) {
+                                                //         timeRange = `с 00:00 до ${time_of_finding_1}`;
+                                                //         }
+                                                //         else
+                                                //             timeRange = 'с 00:00 до 05:59'; // Ночь
+                                                //         break;
+                                                // }
+                                                // Формирование строки активности с временным диапазоном
+                                                const activityHtml = `<div class="activity ${status}">${timeRange}: ${activity.trim()}</div>`;
+                                                dayDiv.innerHTML += activityHtml; // Добавление активности без разрыва строки
+                                            }
                                         });
-
-                                        container.appendChild(dayDiv);
                                     }
-                                });
+
+                                    container.appendChild(dayDiv);
+                                }
+                            });
+
                             }
                             generateReportFromText(response.extra_info.replace(/  /g, ' <br>'));
                             console.log(response.extra_info);
                             
                         } else {
+                            $('#overlay').hide(); // Скрыть полупрозрачный фон
+                            $('#loader').hide(); // Скрыть индикатор загрузки, если нет координат
                             alert('Не удалось получить координаты.');
                         }
                     },
                     error: function (xhr, status, error) {
                         console.error('Error:', status, error);
+                        $('#overlay').hide(); // Скрыть полупрозрачный фон
+                        $('#loader').hide(); // Скрыть индикатор загрузки в случае ошибки
                         alert('Ошибка при отправке данных.');
                     }
                 });
