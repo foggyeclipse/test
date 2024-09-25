@@ -39,7 +39,7 @@
             padding-top: 20px;
         }
         .container {
-            max-width: 800px;
+            max-width: 900px;
         }
         .form-control {
             margin-bottom: 10px;
@@ -466,13 +466,26 @@
                                     if (activities) {
                                         activities.forEach((activity, activityIndex) => {
                                             if (activity.trim() !== '') {
+                                                // // Извлечение статуса активности (good, bad, neutral)
+                                                // const statusMatch = activity.match(/(\bgood\b|\bbad\b)/);
+                                                // const status = statusMatch ? statusMatch[0] : 'neutral';
+
                                                 // Извлечение статуса активности (good, bad, neutral)
                                                 const statusMatch = activity.match(/(\bgood\b|\bbad\b)/);
-                                                const status = statusMatch ? statusMatch[0] : 'neutral';
+                                                let status = statusMatch ? statusMatch[0] : 'neutral';
+
+                                                // Заменяем значения "good" и "bad" на нужные строки
+                                                if (status === 'good') {
+                                                    weather = 'Погодные условия: хорошие';
+                                                } else if (status === 'bad') {
+                                                    weather = 'Погодные условия: плохие';
+                                                } else {
+                                                    weather = 'Погодные условия: нейтральные';
+                                                }
 
                                                 // Извлечение части дня (morning, day, evening, night)
                                                 const timeOfDayMatch = activity.match(/\b(morning|day|evening|night)\b/);
-                                                const timeOfDay = timeOfDayMatch ? timeOfDayMatch[0] : 'day';
+                                                let timeOfDay = timeOfDayMatch ? timeOfDayMatch[0] : 'day';
 
                                                 // Определение временного диапазона для каждой части дня
                                                 let timeRange;
@@ -525,6 +538,16 @@
                                                             break;
                                                     }
                                                 }
+
+                                                if (timeOfDay === 'morning') {
+                                                    timeOfDay = 'Утро';
+                                                } else if (timeOfDay === 'day') {
+                                                    timeOfDay = 'День';
+                                                } else if (timeOfDay === 'evening') {
+                                                    timeOfDay = 'Вечер';
+                                                } else {
+                                                    timeOfDay = 'Ночь';
+                                                }
                                                 // switch (timeOfDay) {
                                                 //     case 'morning':
                                                 //         if (dayIndex === 0 && activityIndex === 0) {
@@ -569,7 +592,8 @@
                                                 //         break;
                                                 // }
                                                 // Формирование строки активности с временным диапазоном
-                                                const activityHtml = `<div class="activity ${status}">${timeRange}: ${activity.trim()}</div>`;
+                                                activity = activity.split(' ')[0] + "км, " + activity.split(' ').slice(1, -2).join(' ');
+                                                const activityHtml = `<div class="activity ${status}">${timeOfDay} ${timeRange}: ${activity.trim()}, ${weather}</div>`;
                                                 dayDiv.innerHTML += activityHtml; // Добавление активности без разрыва строки
                                             }
                                         });

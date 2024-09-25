@@ -72,7 +72,7 @@ def get_behavior_coef(behavior_data):
         behavior_coef = 0
     elif result_text == "искать укрытие:":
         behavior_coef = 0.2
-    return behavior_coef, result_text + ' ' + str(max_percentage) + '%'
+    return behavior_coef, result_text.capitalize() + ' ' + str(max_percentage) + '%'
 
 def get_behavior_data(data, current_time, current_date):
     if 6 <= current_time < 12:
@@ -103,6 +103,46 @@ def get_behavior_data(data, current_time, current_date):
         }
     return data_beh, time
 
+def round_to_nearest_multiple_of_6(n):
+    if n < 0 or n > 24:
+        raise ValueError("Число должно быть в диапазоне от 0 до 24")
+
+    lower = (n // 6) * 6  # ближайшее кратное 6 вниз
+    upper = lower + 6      # ближайшее кратное 6 вверх
+
+    # Если верхняя граница превышает 24, оставляем только нижнюю
+    if upper > 24:
+        return lower
+
+    return lower
+    # Возвращаем ближайшее из двух кратных
+    # if (n - lower) < (upper - n):
+    #     return lower
+    # else:
+    #     return upper
+def calc_last_day(data,time_passed, hours, normal_speed, speed_index, total_radius, list_of_radius, day):
+    current_date = data.get('date_of_finding')
+    data_beh, time = get_behavior_data(data, time_passed, current_date)
+
+    behavior_data, weather = predict_behavior(data_beh)
+
+    behavior_coef, beh_main = get_behavior_coef(behavior_data)
+
+    interval_radius = (
+        hours
+        * normal_speed
+        * speed_index
+        * behavior_coef
+    )
+    total_radius += interval_radius
+    print(hours,"????????#^####")
+
+    if time_passed == 0:
+        list_of_radius += f'День {day}: '
+
+    list_of_radius +=' '.join([str(interval_radius), str(beh_main), str(weather), str(time)]) + '  '
+    
+    return total_radius, list_of_radius
 
 # Функция расчета радиуса поиска
 def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvature=None, slope_degree=None, fatigue_level=None, time_of_day=None, weather_conditions=None, group_factor=None):
@@ -137,26 +177,17 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
     list_of_radius = ''
     total_radius = 0
     current_date = data.get('date_of_loss')
-    def round_to_nearest_multiple_of_6(n):
-        if n < 0 or n > 24:
-            raise ValueError("Число должно быть в диапазоне от 0 до 24")
 
-        lower = (n // 6) * 6  # ближайшее кратное 6 вниз
-        upper = lower + 6      # ближайшее кратное 6 вверх
+    time_of_loss = int(data.get('time_of_loss').split(':')[0])
+    time_of_finding = int(data.get('time_of_finding').split(':')[0])
+    time_passed = round_to_nearest_multiple_of_6(time_of_loss)
+    res = time_of_loss - time_passed 
 
-        # Если верхняя граница превышает 24, оставляем только нижнюю
-        if upper > 24:
-            return lower
-
-        # Возвращаем ближайшее из двух кратных
-        if (n - lower) < (upper - n):
-            return lower
-        else:
-            return upper
-    time_passed = round_to_nearest_multiple_of_6(int(data.get('time_of_loss').split(':')[0]))
     day = 1
     prev_radius = []
     first_day=True
+    last_day = False
+
     print(time_passed)
 
     for i in range(0, hours_elapsed, 6):
@@ -167,18 +198,22 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
             day +=1
             prev_radius.append(total_radius)
         data_beh, time = get_behavior_data(data, time_passed, current_date)
-        # print(data_beh)
 
         behavior_data, weather = predict_behavior(data_beh)
-        # print(behavior_data)
 
         behavior_coef, beh_main = get_behavior_coef(behavior_data)
-        print(behavior_coef)
-        # print(interval_hours)
 
         # Рассчитываем радиус для каждых 6 часов
-        interval_hours = min(6, hours_elapsed - i)  # Учитываем оставшиеся часы в последнем интервале
-        # print(interval_hours)
+        interval_hours = min(6, hours_elapsed - i) 
+        if interval_hours != 6:
+            continue
+        #     interval_hours = interval_hours + res
+        # elif interval_hours !=6 and interval_hours + res > 6:
+        #     a = interval_hours + res-6
+        #     interval_hours = 6
+        if first_day:
+            interval_hours = 6 - res # Учитываем оставшиеся часы в последнем интервале
+        print(interval_hours, res, "????????")
         interval_radius = (
             interval_hours
             * normal_speed
@@ -193,9 +228,136 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
             first_day=False
         list_of_radius +=' '.join([str(interval_radius), str(beh_main), str(weather), str(time)]) + '  '
         time_passed += 6
+        # if last_day:
+    if time_passed == 24:
+        time_passed = 0
+        day += 1
+    total_radius, list_of_radius = calc_last_day(data,time_passed, -time_passed + time_of_finding,normal_speed, speed_index, total_radius, list_of_radius, day)
     print(total_radius)
     return total_radius, list_of_radius, prev_radius
-    
+
+# def round_to_nearest_multiple_of_6(time_of_loss, time_of_finding):
+#     # Функция для определения интервала 6 часов
+#     def get_time_interval(hour, minute):
+#         if (hour == 0 and minute == 0) or (hour < 6):
+#             return '00:00 - 06:00'
+#         elif 6 <= hour < 12:
+#             return '06:00 - 12:00'
+#         elif 12 <= hour < 18:
+#             return '12:00 - 18:00'
+#         else:
+#             return '18:00 - 24:00'
+
+#     # Преобразуем время в объект datetime, чтобы выделить часы и минуты
+#     time_loss = datetime.strptime(time_of_loss, '%H:%M')
+#     time_finding = datetime.strptime(time_of_finding, '%H:%M')
+
+#     # Получаем час и минуты для каждого времени
+#     loss_hour, loss_minute = time_loss.hour, time_loss.minute
+#     finding_hour, finding_minute = time_finding.hour, time_finding.minute
+
+#     # Определяем интервал для каждого времени
+#     loss_interval = get_time_interval(loss_hour, loss_minute)
+#     finding_interval = get_time_interval(finding_hour, finding_minute)
+
+#     return loss_interval, finding_interval, loss_hour, finding_hour
+# def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvature=None, slope_degree=None, fatigue_level=None, time_of_day=None, weather_conditions=None, group_factor=None):
+#     normal_speed = 5  # Средняя скорость движения по асфальту в км/ч
+
+#     if age < 18:
+#         normal_speed = 4
+#     elif age >= 60:
+#         normal_speed = 3
+
+#     # Коэффициенты понижения
+#     terrain_passability_coefficient = terrain_passability if terrain_passability is not None else 1.0
+#     path_curvature_coefficient = path_curvature if path_curvature is not None else 1.0
+#     slope_degree_coefficient = slope_degree if slope_degree is not None else 1.0
+#     fatigue_level_coefficient = fatigue_level if fatigue_level is not None else 1.0
+#     time_of_day_coefficient = time_of_day if time_of_day is not None else 1.0
+#     weather_conditions_coefficient = weather_conditions if weather_conditions is not None else 1.0
+#     group_factor_coefficient = group_factor if group_factor is not None else 1.0
+
+#     # Индекс скорости движения
+#     speed_index = (
+#         terrain_passability_coefficient
+#         * path_curvature_coefficient
+#         * slope_degree_coefficient
+#         * fatigue_level_coefficient
+#         * time_of_day_coefficient
+#         * weather_conditions_coefficient
+#         * group_factor_coefficient
+#     )
+
+#     # Получаем время пропажи и нахождения
+#     time_of_loss = data.get('time_of_loss')
+#     time_of_finding = data.get('time_of_finding')
+
+#     # Получаем интервалы и часы для времени пропажи и нахождения
+#     loss_interval, finding_interval, loss_hour, finding_hour = round_to_nearest_multiple_of_6(time_of_loss, time_of_finding)
+
+#     # Логика для расчета радиуса для первого и последнего интервала
+#     time_loss_minutes_left = (6 - (loss_hour % 6)) * 60  # Сколько минут осталось до конца интервала
+#     time_finding_minutes = (finding_hour % 6) * 60       # Сколько минут прошло с начала интервала
+
+#     # Рассчитываем радиус для времени пропажи
+#     time_loss_hours_left = time_loss_minutes_left / 60
+#     loss_radius = time_loss_hours_left * normal_speed * speed_index
+
+#     # Рассчитываем радиус для времени нахождения
+#     time_finding_hours = time_finding_minutes / 60
+#     finding_radius = time_finding_hours * normal_speed * speed_index
+
+#     # Логика для промежуточных интервалов по 6 часов
+#     list_of_radius = ''
+#     total_radius = loss_radius  # Начинаем с радиуса первого дня
+#     current_date = data.get('date_of_loss')
+
+#     # Пропуск начальных часов (время пропажи)
+#     time_passed = loss_hour
+#     day = 1
+#     prev_radius = []
+#     first_day = True
+
+#     for i in range(0, hours_elapsed, 6):
+#         # Переход на следующий день
+#         if time_passed % 24 == 0 and time_passed != 0:
+#             current_date = (datetime.strptime(current_date, '%d.%m.%Y') + timedelta(days=1)).strftime('%d.%m.%Y')
+#             time_passed = 0
+#             day += 1
+#             prev_radius.append(total_radius)
+
+#         # Получаем поведенческие данные и данные о погоде
+#         data_beh, time = get_behavior_data(data, time_passed, current_date)
+#         behavior_data, weather = predict_behavior(data_beh)
+#         behavior_coef, beh_main = get_behavior_coef(behavior_data)
+
+#         # Рассчитываем радиус для каждых 6 часов
+#         interval_hours = min(6, hours_elapsed - i)  # Учитываем оставшиеся часы в последнем интервале
+
+#         interval_radius = (
+#             interval_hours
+#             * normal_speed
+#             * speed_index
+#             * behavior_coef
+#         )
+#         total_radius += interval_radius
+
+#         # Логирование радиусов для каждого интервала
+#         if time_passed == 0 or first_day:
+#             list_of_radius += f'День {day}: '
+#             first_day = False
+
+#         list_of_radius += ' '.join([str(interval_radius), str(beh_main), str(weather), str(time)]) + '  '
+#         time_passed += 6
+
+#     # Учитываем последний неполный интервал (время нахождения)
+#     total_radius += finding_radius
+#     list_of_radius += f' Последний интервал: {finding_radius:.2f} км'
+
+#     print(total_radius)
+#     return total_radius, list_of_radius, prev_radius
+
 @app.route('/')
 def index():
     return render_template('base.html')
