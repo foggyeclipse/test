@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from datetime import datetime, timedelta
+import ast
 
 app = Flask(__name__)
 
@@ -67,14 +68,14 @@ def get_behavior_coef(behavior_data):
     # print(result_text)
     if result_text!="остаться на месте:":
         result_text = result_text.split('%')[1].split('\n')[1]
-    print(result_text)
+    # print(result_text)
     if result_text == "остаться на месте:":
         behavior_coef = 0
     elif result_text == "искать укрытие:":
         behavior_coef = 0.2
     return behavior_coef, result_text.capitalize() + ' ' + str(max_percentage) + '%'
 
-def get_behavior_data(data, current_time, current_date):
+def get_behavior_data(data, current_time, current_date, bad_mentality=0):
     if 6 <= current_time < 12:
         time = "morning"
     elif 12 <= current_time < 18:
@@ -83,15 +84,20 @@ def get_behavior_data(data, current_time, current_date):
         time = "evening"
     else:
         time = "night"
+
     if 0 <= current_time < 10:
         current_time = f'0{current_time}'
 
-    print(current_time)
+    # print(current_time)
+    mentality = str(data.get('mental_condition')) 
+    if bad_mentality == 1 and mentality == 'stable': 
+        mentality = 'unstable'
+
     data_beh = {
             'Возраст': int(data.get('age')),
             'Пол': str(data.get('gender')),
             'Физическое состояние': str(data.get('physical_condition')),
-            'Психическое состояние': str(data.get('mental_condition')),
+            'Психическое состояние': mentality,
             'Опыт нахождения в дикой природе': str(data.get('experience')),
             'Знание местности': str(data.get('local_knowledge')),
             'Наличие телефона': str(data.get('phone')),
@@ -135,12 +141,12 @@ def calc_last_day(data,time_passed, hours, normal_speed, speed_index, total_radi
         * behavior_coef
     )
     total_radius += interval_radius
-    print(hours,"????????#^####")
+    # print(hours,"????????#^####")
 
     if time_passed == 0:
         list_of_radius += f'День {day}: '
 
-    list_of_radius +=' '.join([str(interval_radius), str(beh_main), str(weather), str(time)]) + '  '
+    list_of_radius +=' '.join([str(round(interval_radius, 2)), str(beh_main), str(weather), str(time)]) + '  '
     
     return total_radius, list_of_radius
 
@@ -178,17 +184,36 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
     total_radius = 0
     current_date = data.get('date_of_loss')
 
-    time_of_loss = int(data.get('time_of_loss').split(':')[0])
-    time_of_finding = int(data.get('time_of_finding').split(':')[0])
-    time_passed = round_to_nearest_multiple_of_6(time_of_loss)
-    res = time_of_loss - time_passed 
+    hours_of_loss = int(data.get('time_of_loss').split(':')[0])
+    minutes_of_loss = int(data.get('time_of_loss').split(':')[1])
+    hour_of_finding = int(data.get('time_of_finding').split(':')[0])
+    minutes_of_finding = int(data.get('time_of_finding').split(':')[1])
+
+    # hours_of_loss, minutes_of_loss = map(int, data.get('time_of_loss').split(':'))
+    # hour_of_finding, minutes_of_finding = map(int, data.get('time_of_finding').split(':'))
+    # time_passed = round_to_nearest_multiple_of_6(time_of_loss)
+    # res = time_of_loss - time_passed 
+
+    # Учитываем как часы, так и минуты, приводим к часам с долями
+    time_of_loss_total = hours_of_loss + minutes_of_loss / 60.0
+    time_of_finding_total = hour_of_finding + minutes_of_finding / 60.0
+
+    print("Raw time of loss:", time_of_loss_total)
+    print("Raw time of finding:", time_of_finding_total)
+
+    # print(time_of_loss_total, time_of_finding_total)
+
+    # Округление до ближайшего 6-часового интервала
+    time_passed = round_to_nearest_multiple_of_6(hours_of_loss)
+    res = time_of_loss_total - time_passed  # Разница, которая будет учтена для первого интервала
 
     day = 1
     prev_radius = []
     first_day=True
     last_day = False
 
-    print(time_passed)
+    # print('TIME PASSED')
+    # print(time_passed)
 
     for i in range(0, hours_elapsed, 6):
         # if time_passed!=0:
@@ -197,11 +222,20 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
             time_passed = 0
             day +=1
             prev_radius.append(total_radius)
-        data_beh, time = get_behavior_data(data, time_passed, current_date)
+        
+        # if first_day:
+        #     interval_hours = 6 - res # Учитываем оставшиеся часы в последнем интервале
+        #     behavior_coef, behavior_main = 1, 'Двигаться без ориентированием: 100.0%'
 
+        if day == 3: 
+            data_beh, time = get_behavior_data(data, time_passed, current_date, 1) 
+        else: 
+            data_beh, time = get_behavior_data(data, time_passed, current_date)
+            
+        print('TIMEEEEEE')
+        print(data, data_beh)
         behavior_data, weather = predict_behavior(data_beh)
-
-        behavior_coef, beh_main = get_behavior_coef(behavior_data)
+        behavior_coef, behavior_main = get_behavior_coef(behavior_data)
 
         # Рассчитываем радиус для каждых 6 часов
         interval_hours = min(6, hours_elapsed - i) 
@@ -213,7 +247,9 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
         #     interval_hours = 6
         if first_day:
             interval_hours = 6 - res # Учитываем оставшиеся часы в последнем интервале
-        print(interval_hours, res, "????????")
+            behavior_coef, behavior_main = 1, 'Двигаться c ориентированием: 100.0%'
+
+        # print(interval_hours, res, "????????")
         interval_radius = (
             interval_hours
             * normal_speed
@@ -221,19 +257,19 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
             * behavior_coef
         )
         total_radius += interval_radius
-        print(interval_radius)
+        # print(interval_radius)
 
         if(time_passed==0 or first_day):
             list_of_radius += f'День {day}: '
             first_day=False
-        list_of_radius +=' '.join([str(interval_radius), str(beh_main), str(weather), str(time)]) + '  '
+        list_of_radius +=' '.join([str(round(interval_radius, 2)), str(behavior_main), str(weather), str(time)]) + '  '
         time_passed += 6
         # if last_day:
     if time_passed == 24:
         time_passed = 0
         day += 1
-    total_radius, list_of_radius = calc_last_day(data,time_passed, -time_passed + time_of_finding,normal_speed, speed_index, total_radius, list_of_radius, day)
-    print(total_radius)
+    total_radius, list_of_radius = calc_last_day(data,time_passed, -time_passed + time_of_finding_total,normal_speed, speed_index, total_radius, list_of_radius, day)
+    # print(total_radius)
     return total_radius, list_of_radius, prev_radius
 
 # def round_to_nearest_multiple_of_6(time_of_loss, time_of_finding):
@@ -428,7 +464,7 @@ def radius():
         # Разница во времени
         date_difference = date_time_of_finding - date_time_of_loss
         hours_difference = date_difference.total_seconds() // 3600  # Разница в часах
-        print(hours_difference)
+        # print(hours_difference)
 
 
         # Вызов функции для получения радиуса
@@ -457,7 +493,7 @@ def get_weather_data(date, time):
     }
     day,month,year = date.split('.')
     hour = time.split(':')[0]
-    print(day,month,year,hour)
+    # print(day,month,year,hour)
 
     url = f"https://arhivpogodi.ru/arhiv/sankt-peterburg/{year}/{month}/"
 
