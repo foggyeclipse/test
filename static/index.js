@@ -111,8 +111,8 @@ $(document).ready(function () {
                     circles.push(circle);
 
 
-                    for (var i = response.prev_radius.length - 1; i >= 0; i--) {
-                        var radius = response.prev_radius[i];
+                    for (var i = response.previous_radius.length - 1; i >= 0; i--) {
+                        var radius = response.previous_radius[i];
                         var radiusInMeters = radius * 1000;
 
                         var circle = L.circle([response.coordinates_psr.latitude, response.coordinates_psr.longitude], {
@@ -137,8 +137,10 @@ $(document).ready(function () {
                     } else {
                         alert('Не удалось получить координаты нахождения.');
                     }
-                    document.getElementById('result').classList.add('alert', 'alert-info')
-                    document.getElementById('result').innerHTML = response.behavior.replace(/%/g, '%  <br>');
+                    document.getElementById('result').classList.add('alert', 'alert-info');
+                    document.getElementById('result').innerHTML = "Вероятности поведения потерявшегося на текущий момент:<br>";
+                    document.getElementById('result').innerHTML += response.behavior.replace(/%/g, '%  <br>');
+
 
                     $('#loader').hide();
                     $('#overlay').hide();
@@ -253,7 +255,6 @@ $(document).ready(function () {
 
                     }
                     generateReportFromText(response.extra_info.replace(/  /g, ' <br>'));
-                    console.log(response.extra_info);
                     
                 } else {
                     $('#overlay').hide();

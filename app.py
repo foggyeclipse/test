@@ -28,13 +28,13 @@ def get_weather_data(date, time):
         return
 
     soup = BeautifulSoup(response.text, "html.parser")
-    day_pattern = rf',\s*{day}\b'
+    day_pattern = rf',\s*({int(day)})\b'
 
     date_blocks = soup.find_all('div', class_='font-size-unset d-inline-block position-sticky px-3 pb-2')
     holydate_blocks = soup.find_all('div', class_='font-size-unset d-inline-block position-sticky px-3 pb-2 text-danger')
 
     weather = parse_weather(date_blocks, day_pattern, hour) or parse_weather(holydate_blocks, day_pattern, hour)
-    
+
     if weather:
         return weather
     else:
@@ -309,6 +309,13 @@ def radius():
 
         date_time_of_loss_str = f"{date_of_loss_str} {time_of_loss_str}"
         date_time_of_finding_str = f"{date_of_finding_str} {time_of_finding_str}"
+        
+        date_time_of_loss = datetime.strptime(date_time_of_loss_str, '%d.%m.%Y %H:%M')
+        date_time_of_finding = datetime.strptime(date_time_of_finding_str, '%d.%m.%Y %H:%M')
+
+        hours_difference = (date_time_of_finding - date_time_of_loss).total_seconds() // 3600
+    
+        radius, extra_info, previous_radius = get_radius(data, int(data.get('age')), int(hours_difference))
 
         behavior_context = {
             'Возраст': int(data.get('age')),
@@ -318,21 +325,14 @@ def radius():
             'Опыт нахождения в дикой природе': str(data.get('experience')),
             'Знание местности': str(data.get('local_knowledge')),
             'Наличие телефона': str(data.get('phone')),
-            'Время суток': "unknown", #
+            'Время суток': extra_info.split()[-1], #
             'Моральные обязательства': "unknown",
             'Внешние сигналы': "unknown",
-            'Дата': data.get('date_of_loss'), #
-            'Время': time_of_loss_str #
+            'Дата': data.get('date_of_finding'), #
+            'Время': time_of_finding_str #
         }
 
         behavior, _ = predict_behavior(behavior_context)
-
-        date_time_of_loss = datetime.strptime(date_time_of_loss_str, '%d.%m.%Y %H:%M')
-        date_time_of_finding = datetime.strptime(date_time_of_finding_str, '%d.%m.%Y %H:%M')
-
-        hours_difference = (date_time_of_finding - date_time_of_loss).total_seconds() // 3600
-    
-        radius, extra_info, prev_radius = get_radius(data, int(data.get('age')), int(hours_difference))
 
         return jsonify({
             'status': 'success',
@@ -341,7 +341,7 @@ def radius():
             'coordinates_finding': coordinates_finding,
             'behavior': behavior,
             'extra_info': extra_info,
-            'prev_radius': prev_radius
+            'previous_radius': previous_radius
         })
     
     except ValueError as e:
