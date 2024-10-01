@@ -5,127 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Форма ввода данных</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .day {
-            margin-bottom: 20px;
-            padding: 10px;
-            border: 1px solid #ddd;
-        }
-        .activity {
-            margin-left: 20px;
-            padding: 5px;
-        }
-        /* .activity.good {
-            color: green;
-        }
-        .activity.bad {
-            color: red;
-        } */
-    </style>
-    <style>
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-control {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-        }
-        body {
-            padding-top: 20px;
-        }
-        .container {
-            max-width: 900px;
-        }
-        .form-control {
-            margin-bottom: 10px;
-        }
-        .hidden-input {
-            display: none;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        /* Стиль для оверлея */
-        .overlay {
-            display: none; /* Скрыт по умолчанию */
-            position: fixed; /* Фиксированное позиционирование для покрытия всего экрана */
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.8); /* Белый полупрозрачный фон */
-            z-index: 1000; /* Над всеми другими элементами */
-        }
-        .loader {
-            display: none;
-            position: fixed; /* Фиксированное позиционирование для центрирования */
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%); /* Центрирование по горизонтали и вертикали */
-            z-index: 1001; /* Над оверлеем */
-        }
-
-        .spinner-border {
-            width: 3rem;
-            height: 3rem;
-            border: .25em solid #007bff; 
-            border-right-color: transparent;
-            border-radius: 50%;
-            animation: spinner-border .75s linear infinite;
-        }
-
-        /* @keyframes spinner-border {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        } */
-        /* .loader {
-            display: none;
-            position: absolute;
-            top: 154%;
-            left: 56%;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
-        }
-        .loader .spinner-border {
-            width: 3rem;
-            height: 3rem;
-        } */
-        #map {
-            height: 500px;
-        }
-    </style>
+    <link rel="stylesheet" href="static/styles.css">
 </head>
 <body>
     <div class="container">
         <h2 class="text-center">Форма ввода данных</h2>
         <form id="dataForm" method="post" action="/radius">
-            <!-- Поля формы -->
             <div class="form-group">
                 <label for="date_of_loss">Дата потери:</label>
-                <input type="text" id="date_of_loss" name="date_of_loss" class="form-control"
-                    placeholder="Введите дату потери" required>
+                <input type="text" id="date_of_loss" name="date_of_loss" class="form-control" placeholder="Введите дату потери" required>
+                
                 <label for="time_of_loss">Время потери:</label>
-                <input type="time" id="time_of_loss" name="time_of_loss" class="form-control" value="12:00"
-                    placeholder="Введите время потери">
+                <input type="time" id="time_of_loss" name="time_of_loss" class="form-control" value="12:00" placeholder="Введите время потери">
             </div>
-    
+
             <div class="form-group">
                 <label for="date_of_finding">Текущая дата:</label>
-                <input type="text" id="date_of_finding" name="date_of_finding" class="form-control readonly-field"
-                    placeholder="Введите дату нахождения" required>
+                <input type="text" id="date_of_finding" name="date_of_finding" class="form-control readonly-field" placeholder="Введите дату нахождения" required>
+                
                 <label for="time_of_finding">Текущее время:</label>
-                <input type="time" id="time_of_finding" name="time_of_finding" class="form-control"
-                    placeholder="Введите текущее время">
+                <input type="time" id="time_of_finding" name="time_of_finding" class="form-control" placeholder="Введите текущее время">
             </div>
+
             <div class="form-group">
                 <label for="age">Возраст:</label>
                 <input type="number" id="age" name="age" class="form-control" required>
             </div>
+
             <div class="form-group">
                 <label for="gender">Пол:</label>
                 <select id="gender" name="gender" class="form-control" required>
@@ -134,6 +40,7 @@
                     <option value="female">Женский</option>
                 </select>
             </div>
+
             <div class="form-group">
                 <label for="physical_condition">Физическое состояние:</label>
                 <select id="physical_condition" name="physical_condition" class="form-control" required>
@@ -144,6 +51,7 @@
                     <option value="health_deterioration">Ухудшение здоровья</option>
                 </select>
             </div>
+
             <div class="form-group">
                 <label for="mental_condition">Психическое состояние:</label>
                 <select id="mental_condition" name="mental_condition" class="form-control" required>
@@ -152,18 +60,22 @@
                     <option value="unstable">Неустойчив</option>
                 </select>
             </div>
+
             <div class="form-group">
                 <label for="psr_lat">Широта центра ПСР:</label>
                 <input type="text" id="psr_lat" name="psr_lat" class="form-control" required>
             </div>
+
             <div class="form-group">
                 <label for="psr_lon">Долгота центра ПСР:</label>
                 <input type="text" id="psr_lon" name="psr_lon" class="form-control" required>
             </div>
+
             <div class="form-group">
                 <label for="finding_lat">Широта нахождения:</label>
                 <input type="text" id="finding_lat" name="finding_lat" class="form-control" required>
             </div>
+
             <div class="form-group">
                 <label for="finding_lon">Долгота нахождения:</label>
                 <input type="text" id="finding_lon" name="finding_lon" class="form-control" required>
@@ -176,12 +88,10 @@
             <div id="additional_fields" class="hidden-input">
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link active" id="tab1-tab" data-toggle="tab" href="#tab1" role="tab"
-                            aria-controls="tab1" aria-selected="true">Данные о потерявшемся</a>
+                        <a class="nav-link active" id="tab1-tab" data-toggle="tab" href="#tab1" role="tab" aria-controls="tab1" aria-selected="true">Данные о потерявшемся</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="tab2-tab" data-toggle="tab" href="#tab2" role="tab" aria-controls="tab2"
-                            aria-selected="false">Данные о местности</a>
+                        <a class="nav-link" id="tab2-tab" data-toggle="tab" href="#tab2" role="tab" aria-controls="tab2" aria-selected="false">Данные о местности</a>
                     </li>
                 </ul>
                 <div class="tab-content" id="myTabContent">
@@ -215,18 +125,15 @@
                     <div class="tab-pane fade" id="tab2" role="tabpanel" aria-labelledby="tab2-tab">
                         <div class="form-group">
                             <label for="terrain_passability">Проходимость местности:</label>
-                            <input type="number" id="terrain_passability" name="terrain_passability"
-                                class="form-control" step="0.01" min="0" max="1">
+                            <input type="number" id="terrain_passability" name="terrain_passability" class="form-control" step="0.01" min="0" max="1">
                         </div>
                         <div class="form-group">
                             <label for="path_curvature">Кривизна местности:</label>
-                            <input type="number" id="path_curvature" name="path_curvature" class="form-control"
-                                step="0.01" min="0" max="1">
+                            <input type="number" id="path_curvature" name="path_curvature" class="form-control" step="0.01" min="0" max="1">
                         </div>
                         <div class="form-group">
                             <label for="slope_angle">Угол наклона местности:</label>
-                            <input type="number" id="slope_angle" name="slope_angle" class="form-control" step="0.01"
-                                min="0" max="1">
+                            <input type="number" id="slope_angle" name="slope_angle" class="form-control" step="0.01" min="0" max="1">
                         </div>
                     </div>
                 </div>
@@ -236,392 +143,22 @@
                 <button type="submit" class="btn btn-primary">Отправить</button>
             </div>
 
-            <!-- Оверлей для полупрозрачного фона -->
             <div class="overlay" id="overlay"></div>
-            <!-- Индикатор загрузки -->
             <div class="loader" id="loader">
                 <div class="spinner-border"></div>
             </div>
         </form>
 
-        <!-- Место для карты -->
         <div id="map"></div>
-
-        <!-- Блок для вывода результата -->
         <div id="result"></div>
-
         <div id="report"></div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
-    <script>
-        function formatDate(date) {
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0'); // Месяцы начинаются с 0
-            const year = date.getFullYear();
-            return `${day}.${month}.${year}`; // Формат даты YYYY-MM-DD
-        }
-
-        // Получаем текущую дату
-        const currentDate = new Date();
-        // Форматируем дату
-        const formattedDate = formatDate(currentDate);
-        // Устанавливаем значение поля
-        document.getElementById('date_of_finding').value = formattedDate;
-        console.log($('#psr_lat').val())
-        function parseCoordinate(coord) {
-            return parseFloat(coord.replace(',', '.'));
-        }
-
-        // Устанавливаем текущее системное время в поле time_of_finding
-        const hours = String(currentDate.getHours()).padStart(2, '0');
-        const minutes = String(currentDate.getMinutes()).padStart(2, '0');
-        const currentTime = `${hours}:${minutes}`;
-        document.getElementById('time_of_finding').value = currentTime;
-
-        $(document).ready(function () {
-            let mapCreated = false; // Переменная для отслеживания создания карты
-            let map; // Глобальная переменная для карты
-
-            $('#toggleAdditionalFields').click(function () {
-                $('#additional_fields').toggleClass('hidden-input');
-                if (!$('#additional_fields').hasClass('hidden-input')) {
-                    $('#myTab .nav-link').first().tab('show'); // Показать первую вкладку по умолчанию
-                }
-            });
-
-            // Валидация коэффициентов на вкладке 2
-            $('#tab2 input[type="number"]').on('input', function () {
-                var value = parseFloat($(this).val());
-                if (value < 0 || value > 1) {
-                    alert('Коэффициент должен быть в пределах от 0 до 1');
-                    $(this).val('');
-                }
-            });
-
-            $('#dataForm').on('submit', function (e) {
-                e.preventDefault(); // Отключить стандартное поведение отправки формы
-                
-                $('#overlay').show(); // Показать полупрозрачный фон
-                $('#loader').show(); // Показать индикатор загрузки
-
-                // Собрать данные формы, учитывая необязательные поля
-                var data = {
-                    date_of_loss: $('#date_of_loss').val(),
-                    time_of_loss: $('#time_of_loss').val(),
-                    date_of_finding: $('#date_of_finding').val(),
-                    time_of_finding: $('#time_of_finding').val(),
-                    age: $('#age').val(),
-                    gender: $('#gender').val(),
-                    physical_condition: $('#physical_condition').val(),
-                    mental_condition: $('#mental_condition').val(),
-                    experience: $('#experience').val() || null,
-                    local_knowledge: $('#local_knowledge').val() || null,
-                    phone: $('#phone').val() || null,
-                    terrain_passability: $('#terrain_passability').val() || null,
-                    path_curvature: $('#path_curvature').val() || null,
-                    slope_angle: $('#slope_angle').val() || null,
-                    coords_psr: {
-                        latitude: parseCoordinate($('#psr_lat').val()),
-                        longitude: parseCoordinate($('#psr_lon').val())
-                    },
-                    coords_finding: {
-                        latitude: parseCoordinate($('#finding_lat').val()),
-                        longitude: parseCoordinate($('#finding_lon').val())
-                    }
-                };
-
-                $.ajax({
-                    url: '/radius',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(data),
-                    success: function (response) {
-                        if (response && response.coords_psr) {
-                            if (!mapCreated) {
-                                map = L.map('map').setView([response.coords_psr.latitude, response.coords_psr.longitude], 13);
-                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                    maxZoom: 18,
-                                    attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                }).addTo(map);
-                                mapCreated = true;
-                            }
-
-                            map.eachLayer(function (layer) {
-                                if (layer instanceof L.Marker || layer instanceof L.Circle) {
-                                    map.removeLayer(layer);
-                                }
-                            });
-                            
-                            // Добавляем метку для центра ПСР
-                            L.marker([response.coords_psr.latitude, response.coords_psr.longitude]).addTo(map)
-                                .bindTooltip('Центр ПСР')
-                                .openTooltip();
-                            
-                            var circles = [];
-                            // Добавляем круговой радиус
-                            // Создаем круг
-                            var radiusInMeters = response.radius * 1000; // если радиус в километрах
-                            var circle = L.circle([response.coords_psr.latitude, response.coords_psr.longitude], {
-                                color: 'blue',
-                                fillColor: '#add8e6',
-                                fillOpacity: 0.5,
-                                radius: radiusInMeters
-                            }).addTo(map);
-
-                            // Добавляем всплывающую подсказку на круг
-                            circle.bindTooltip("Общий радиус: " + response.radius + " км", {
-                                permanent: false, // подсказка будет отображаться только при наведении
-                                direction: 'top', // направление текста (вверх)
-                                className: 'circle-tooltip' // класс для стилизации, если нужно
-                            });
-                            circles.push(circle);
-
-
-                            for (var i = response.prev_radius.length - 1; i >= 0; i--) {
-                                var radius = response.prev_radius[i];
-                                var radiusInMeters = radius * 1000; // если радиус в километрах
-
-                                // Создаем круг
-                                var circle = L.circle([response.coords_psr.latitude, response.coords_psr.longitude], {
-                                    color: 'blue',
-                                    fillColor: '#add8e6',
-                                    fillOpacity: 0,
-                                    radius: radiusInMeters
-                                }).addTo(map);
-
-                                // Добавляем всплывающую подсказку на круг
-                                circle.bindTooltip("День " + parseInt(i+1, 10) + " радиус: " + radius + " км", {
-                                    permanent: false,
-                                    direction: 'top',
-                                    className: 'circle-tooltip'
-                                });
-                                circles.push(circle);
-
-                                // Добавляем события для изменения прозрачности при наведении и уходе
-                                // circle.on('mouseover', function() {
-                                //     // сircle.setStyle({ fillOpacity: 0.5 });
-                                //     circles.forEach(function(c) {
-                                //         if (c !== this) {
-                                //             c.setStyle({ opacity: 0 });
-                                //             c.setStyle({ fillOpacity: 0 }); // Делаем остальные круги прозрачными
-                                //         }
-                                //     }, this);
-                                // });
-
-                                // circle.on('mouseout', function() {
-                                //     сircles[0].setStyle({ fillOpacity: 0.5 });
-
-                                //     circles.forEach(function(c) {
-                                //         c.setStyle({ opacity: 0.5 }); // Возвращаем исходную прозрачность
-                                //     });
-                                // });
-
-                            }
-
-                            
-                            // Добавляем метку для координат нахождения
-                            if (response.coords_finding) {
-                                L.marker([response.coords_finding.latitude, response.coords_finding.longitude]).addTo(map)
-                                    .bindTooltip('Место нахождения')
-                                    .openTooltip();
-                            } else {
-                                alert('Не удалось получить координаты нахождения.');
-                            }
-                            document.getElementById('result').classList.add('alert', 'alert-info')
-                            document.getElementById('result').innerHTML = response.behavior.replace(/%/g, '%  <br>');
-
-                            $('#loader').hide(); // Скрыть индикатор загрузки после получения ответа
-                            $('#overlay').hide(); // Скрыть полупрозрачный фон
-                            // document.getElementById('extra_result').innerHTML = response.extra_info.replace(/  /g, ' <br>');
-                            function generateReportFromText(text) {
-                                const container = document.getElementById('report');
-                                container.innerHTML = ''; // Очистка контейнера перед добавлением нового содержимого
-
-                                // Разделение текста по дням
-                                const days = text.split(/(?=День \d+:)/g);
-                                // Получение значений времени из элементов
-                                const timeOfLossInput = document.getElementById('time_of_loss');
-                                const time_of_loss_1 = timeOfLossInput.value;
-
-                                const timeOfFindingInput = document.getElementById('time_of_finding');
-                                const time_of_finding_1 = timeOfFindingInput.value;
-                                days.forEach((day, dayIndex) => {
-                                // Определение номера дня
-                                const dayMatch = day.match(/День (\d+):/);
-                                if (dayMatch) {
-                                    const dayNumber = dayMatch[1];
-                                    const dayDiv = document.createElement('div');
-                                    dayDiv.className = 'day';
-                                    dayDiv.innerHTML = `<strong>День ${dayNumber}:</strong>`;
-
-                                    // Извлечение активностей с помощью точного регулярного выражения
-                                    const activities = day.replace(/День \d+: /, '').trim().match(/\d+\.\d+ [^:]+: \d+\.\d+% [^ ]+ (morning|day|evening|night)/g);
-
-                                    if (activities) {
-                                        activities.forEach((activity, activityIndex) => {
-                                            if (activity.trim() !== '') {
-                                                // // Извлечение статуса активности (good, bad, neutral)
-                                                // const statusMatch = activity.match(/(\bgood\b|\bbad\b)/);
-                                                // const status = statusMatch ? statusMatch[0] : 'neutral';
-
-                                                // Извлечение статуса активности (good, bad, neutral)
-                                                const statusMatch = activity.match(/(\bgood\b|\bbad\b)/);
-                                                let status = statusMatch ? statusMatch[0] : 'neutral';
-
-                                                // Заменяем значения "good" и "bad" на нужные строки
-                                                if (status === 'good') {
-                                                    weather = 'Погодные условия: хорошие';
-                                                } else if (status === 'bad') {
-                                                    weather = 'Погодные условия: плохие';
-                                                } else {
-                                                    weather = 'Погодные условия: нейтральные';
-                                                }
-
-                                                // Извлечение части дня (morning, day, evening, night)
-                                                const timeOfDayMatch = activity.match(/\b(morning|day|evening|night)\b/);
-                                                let timeOfDay = timeOfDayMatch ? timeOfDayMatch[0] : 'day';
-
-                                                // Определение временного диапазона для каждой части дня
-                                                let timeRange;
-                                                if (dayIndex === 0 && activityIndex === 0) {
-                                                    // Если это первый день и первая активность
-                                                    switch (timeOfDay) {
-                                                        case 'morning':
-                                                            timeRange = `с ${time_of_loss_1} до 11:59`;
-                                                            break;
-                                                        case 'day':
-                                                            timeRange = `с ${time_of_loss_1} до 17:59`;
-                                                            break;
-                                                        case 'evening':
-                                                            timeRange = `с ${time_of_loss_1} до 23:59`;
-                                                            break;
-                                                        case 'night':
-                                                            timeRange = `с ${time_of_loss_1} до 05:59`;
-                                                            break;
-                                                    }
-                                                } else if (dayIndex === days.length - 1 && activityIndex === activities.length - 1) {
-                                                    // Если это последний день и последняя активность
-                                                    switch (timeOfDay) {
-                                                        case 'morning':
-                                                            timeRange = `с 06:00 до ${time_of_finding_1}`;
-                                                            break;
-                                                        case 'day':
-                                                            timeRange = `с 12:00 до ${time_of_finding_1}`;
-                                                            break;
-                                                        case 'evening':
-                                                            timeRange = `с 18:00 до ${time_of_finding_1}`;
-                                                            break;
-                                                        case 'night':
-                                                            timeRange = `с 00:00 до ${time_of_finding_1}`;
-                                                            break;
-                                                    }
-                                                } else {
-                                                    // Обычные временные интервалы для остальных случаев
-                                                    switch (timeOfDay) {
-                                                        case 'morning':
-                                                            timeRange = 'с 06:00 до 11:59';
-                                                            break;
-                                                        case 'day':
-                                                            timeRange = 'с 12:00 до 17:59';
-                                                            break;
-                                                        case 'evening':
-                                                            timeRange = 'с 18:00 до 23:59';
-                                                            break;
-                                                        case 'night':
-                                                            timeRange = 'с 00:00 до 05:59';
-                                                            break;
-                                                    }
-                                                }
-
-                                                if (timeOfDay === 'morning') {
-                                                    timeOfDay = 'Утро';
-                                                } else if (timeOfDay === 'day') {
-                                                    timeOfDay = 'День';
-                                                } else if (timeOfDay === 'evening') {
-                                                    timeOfDay = 'Вечер';
-                                                } else {
-                                                    timeOfDay = 'Ночь';
-                                                }
-                                                // switch (timeOfDay) {
-                                                //     case 'morning':
-                                                //         if (dayIndex === 0 && activityIndex === 0) {
-                                                //             timeRange = `с ${time_of_loss_1} до 11:59`;
-            
-                                                //         }
-                                                //         if (dayIndex === days.length - 1 && activityIndex === activities.length - 1) {
-                                                //         timeRange = `с 06:00 до ${time_of_finding_1}`;
-                                                //         }
-                                                //         else
-                                                //             timeRange = 'с 06:00 до 11:59'; // Утро
-                                                //         break;
-                                                //     case 'day':
-                                                //         if (dayIndex === 0 && activityIndex === 0) {
-                                                //             timeRange = `с ${time_of_loss_1} до 17:59`;
-                                                //         }
-                                                //         if (dayIndex === days.length - 1 && activityIndex === activities.length - 1) {
-                                                //         timeRange = `с 12:00 до ${time_of_finding_1}`;
-                                                //         }
-                                                //         else
-                                                //             timeRange = 'с 12:00 до 17:59'; // День
-                                                //         break;
-                                                //     case 'evening':
-                                                //         if (dayIndex === 0 && activityIndex === 0) {
-                                                //             timeRange = `с ${time_of_loss_1} до 23:59`;
-                                                //             }
-                                                //         if (dayIndex === days.length - 1 && activityIndex === activities.length - 1) {
-                                                //             timeRange = `с 18:00 до ${time_of_finding_1}`;
-                                                //         }
-                                                //         else
-                                                //             timeRange = 'с 18:00 до 23:59'; // Вечер
-                                                //             break;
-                                                //     case 'night':
-                                                //         if (dayIndex === 0 && activityIndex === 0) {
-                                                //             timeRange = `с ${time_of_loss_1} до 05:59`;
-                                                //             }
-                                                //         if (dayIndex === days.length - 1 && activityIndex === activities.length - 1) {
-                                                //         timeRange = `с 00:00 до ${time_of_finding_1}`;
-                                                //         }
-                                                //         else
-                                                //             timeRange = 'с 00:00 до 05:59'; // Ночь
-                                                //         break;
-                                                // }
-                                                // Формирование строки активности с временным диапазоном
-                                                activity = activity.split(' ')[0] + "км, " + activity.split(' ').slice(1, -2).join(' ');
-                                                const activityHtml = `<div class="activity ${status}">${timeOfDay} ${timeRange}: ${activity.trim()}, ${weather}</div>`;
-                                                dayDiv.innerHTML += activityHtml; // Добавление активности без разрыва строки
-                                            }
-                                        });
-                                    }
-
-                                    container.appendChild(dayDiv);
-                                }
-                            });
-
-                            }
-                            generateReportFromText(response.extra_info.replace(/  /g, ' <br>'));
-                            console.log(response.extra_info);
-                            
-                        } else {
-                            $('#overlay').hide(); // Скрыть полупрозрачный фон
-                            $('#loader').hide(); // Скрыть индикатор загрузки, если нет координат
-                            alert('Не удалось получить координаты.');
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Error:', status, error);
-                        $('#overlay').hide(); // Скрыть полупрозрачный фон
-                        $('#loader').hide(); // Скрыть индикатор загрузки в случае ошибки
-                        alert('Ошибка при отправке данных.');
-                    }
-                });
-            });
-        });
-    </script>
+    <script src="static/index.js"></script>
 </body>
 </html>

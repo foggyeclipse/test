@@ -184,13 +184,13 @@ def calculate_last_day(data,time_passed, hours, normal_speed, speed_index, total
     behavior_context, time = get_behavior_data(data, time_passed, current_date)
 
     behavior_data, weather = predict_behavior(behavior_context)
-    behavior_coef, behavior_main = get_behavior_coefficient(behavior_data)
+    behavior_coefficient, behavior_main = get_behavior_coefficient(behavior_data)
 
     interval_radius = (
         hours
         * normal_speed
         * speed_index
-        * behavior_coef
+        * behavior_coefficient
     )
     total_radius += interval_radius
 
@@ -241,7 +241,7 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
     result = time_of_loss_total - time_passed
 
     day = 1
-    prev_radius = []
+    previous_radius = []
     first_day=True 
 
     for i in range(0, hours_elapsed, 6):
@@ -249,7 +249,7 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
             current_date = (datetime.strptime(current_date, "%d.%m.%Y") + timedelta(days=1)).strftime("%d.%m.%Y")
             time_passed = 0
             day += 1
-            prev_radius.append(total_radius)
+            previous_radius.append(total_radius)
         
         if day == 3: 
             behavior_context, time = get_behavior_data(data, time_passed, current_date, 1) 
@@ -257,7 +257,7 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
             behavior_context, time = get_behavior_data(data, time_passed, current_date)
 
         behavior_data, weather = predict_behavior(behavior_context)
-        behavior_coef, behavior_main = get_behavior_coefficient(behavior_data)
+        behavior_coefficient, behavior_main = get_behavior_coefficient(behavior_data)
 
         interval_hours = min(6, hours_elapsed - i) 
         if interval_hours != 6:
@@ -265,13 +265,13 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
 
         if first_day:
             interval_hours = 6 - result
-            behavior_coef, behavior_main = 1, "Двигаться c ориентированием: 100.0%"
+            behavior_coefficient, behavior_main = 1, "Двигаться c ориентированием: 100.0%"
 
         interval_radius = (
             interval_hours
             * normal_speed
             * speed_index
-            * behavior_coef
+            * behavior_coefficient
         )
         total_radius += interval_radius
 
@@ -288,7 +288,7 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
 
     total_radius, list_of_radius = calculate_last_day(data, time_passed, -time_passed + time_of_finding_total, normal_speed, speed_index, total_radius, list_of_radius, day)
     
-    return total_radius, list_of_radius, prev_radius
+    return total_radius, list_of_radius, previous_radius
 
 @app.route("/")
 def index():
@@ -298,8 +298,8 @@ def index():
 def radius():
     data = request.get_json()
     try:
-        coords_psr = data.get('coords_psr')
-        coords_finding = data.get('coords_finding')
+        coordinates_psr = data.get('coordinates_psr')
+        coordinates_finding = data.get('coordinates_finding')
 
         date_of_loss_str = data.get('date_of_loss')
         time_of_loss_str = data.get('time_of_loss', '00:00')
@@ -318,11 +318,11 @@ def radius():
             'Опыт нахождения в дикой природе': str(data.get('experience')),
             'Знание местности': str(data.get('local_knowledge')),
             'Наличие телефона': str(data.get('phone')),
-            'Время суток': "unknown",
+            'Время суток': "unknown", #
             'Моральные обязательства': "unknown",
             'Внешние сигналы': "unknown",
-            'Дата': data.get('date_of_loss'),
-            'Время': time_of_loss_str
+            'Дата': data.get('date_of_loss'), #
+            'Время': time_of_loss_str #
         }
 
         behavior, _ = predict_behavior(behavior_context)
@@ -330,7 +330,6 @@ def radius():
         date_time_of_loss = datetime.strptime(date_time_of_loss_str, '%d.%m.%Y %H:%M')
         date_time_of_finding = datetime.strptime(date_time_of_finding_str, '%d.%m.%Y %H:%M')
 
-        # date_difference = date_time_of_finding - date_time_of_loss
         hours_difference = (date_time_of_finding - date_time_of_loss).total_seconds() // 3600
     
         radius, extra_info, prev_radius = get_radius(data, int(data.get('age')), int(hours_difference))
@@ -338,8 +337,8 @@ def radius():
         return jsonify({
             'status': 'success',
             'radius': radius,
-            'coords_psr': coords_psr,
-            'coords_finding': coords_finding,
+            'coordinates_psr': coordinates_psr,
+            'coordinates_finding': coordinates_finding,
             'behavior': behavior,
             'extra_info': extra_info,
             'prev_radius': prev_radius
