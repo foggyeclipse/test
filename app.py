@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta
 import re
 import requests
-from flask import Flask, jsonify, render_template, request
 from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 

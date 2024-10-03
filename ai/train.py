@@ -1,25 +1,17 @@
-import os
 import glob
-import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
-
-from skimage import measure
-from skimage.io import imread, imsave
-from skimage.transform import resize
-from skimage.morphology import dilation, disk
-from skimage.draw import polygon_perimeter
+from unet_ai import model, dice_mc_metric, dice_bce_mc_loss
 
 print(f'Tensorflow version {tf.__version__}')
 print(f'GPU is {"ON" if tf.config.list_physical_devices("GPU") else "OFF" }')
 
-CLASSES = 5  # У вас 4 класса: Дорога, Деревья, Поле и Вода
+
+CLASSES = 5  # 5 классов: Дорога, Деревья, Поле, Вода, Фон
 
 SAMPLE_SIZE = (256, 256)
 
 OUTPUT_SIZE = (1080, 1920)
 
-# Обновленные цвета
 COLORS = ['black', '#00FF00', '#808080', '#FFFF00', '#0000FF']  # Серый, Зелёный, Жёлтый, Синий
 
 def load_images(image, mask):
@@ -73,29 +65,16 @@ dataset = dataset.map(load_images, num_parallel_calls=tf.data.AUTOTUNE)
 dataset = dataset.repeat(100)
 dataset = dataset.map(augmentate_images, num_parallel_calls=tf.data.AUTOTUNE)
 
-# images_and_masks = list(dataset.take(5))
-
-# fig, ax = plt.subplots(nrows = 2, ncols = 5, figsize=(16, 6))
-
-# for i, (image, masks) in enumerate(images_and_masks):
-#     ax[0, i].set_title('Image')
-#     ax[0, i].set_axis_off()
-#     ax[0, i].imshow(image)
-        
-#     ax[1, i].set_title('Mask')
-#     ax[1, i].set_axis_off()    
-#     ax[1, i].imshow(image/1.5)
-   
-#     for channel in range(CLASSES):
-#         contours = measure.find_contours(np.array(masks[:,:,channel]))
-#         for contour in contours:
-#             ax[1, i].plot(contour[:, 1], contour[:, 0], linewidth=1, color=COLORS[channel])
-
-# plt.show()
-# plt.close()
-
-# train_dataset = dataset.take(2000).cache()
-# test_dataset = dataset.skip(2000).take(100).cache()
+train_dataset = dataset.take(2000).cache()
+test_dataset = dataset.skip(2000).take(100).cache()
  
-# train_dataset = train_dataset.batch(8)
-# test_dataset = test_dataset.batch(8)
+train_dataset = train_dataset.batch(8)
+test_dataset = test_dataset.batch(8)
+
+model.load_weights('ai/weights/model.weights.h5')
+
+# Компиляция модели
+model.compile(optimizer='adam', loss=[dice_bce_mc_loss], metrics=[dice_mc_metric])
+history_dice = model.fit(train_dataset, validation_data=test_dataset, epochs=25, initial_epoch=0)
+
+model.save_weights('weights/model.weights.h5')

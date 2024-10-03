@@ -1,0 +1,26 @@
+# Flask and dependencies
+Flask==3.0.0
+requests==2.31.0
+beautifulsoup4==4.12.2
+
+# OpenCV and image processing
+opencv-python-headless==4.8.1.78
+numpy==1.24.4
+Pillow==10.0.1
+matplotlib==3.8.0
+scikit-image==0.21.0
+
+# Folium for map visualizations
+folium==0.14.0
+
+# Selenium for browser automation
+selenium==4.12.0
+
+# TensorFlow and AI/ML libraries
+tensorflow==2.14.0
+pydot==1.4.2
+pydotplus==2.0.2
+graphviz==0.20.1
+
+# Server utilities
+threading==0.0.1

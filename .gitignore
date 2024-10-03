@@ -108,6 +108,6 @@ venv.bak/
 *.png 
 *.jpeg
 *.jpg
-*.txt
+m*.txt
 map*.html
 weights/

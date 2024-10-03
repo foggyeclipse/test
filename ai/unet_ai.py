@@ -1,20 +1,7 @@
-import os
-import glob
-import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
-# from train import dataset, CLASSES
-from skimage import measure
-from skimage.io import imread, imsave
-from skimage.transform import resize
-from skimage.morphology import dilation, disk
-from skimage.draw import polygon_perimeter
-import pydot
-import pydotplus
-import graphviz
 
 
-CLASSES = 5  # У вас 4 класса: Дорога, Деревья, Поле и Вода
+CLASSES = 5  # 5 классов: Дорога, Деревья, Поле, Вода, Фон
 
 SAMPLE_SIZE = (256, 256)
 
@@ -102,8 +89,6 @@ out_layer = out_layer(x)
 
 model = tf.keras.Model(inputs=inp_layer, outputs=out_layer)
 
-# tf.keras.utils.plot_model(model, show_shapes=True, dpi=72)
-
 def dice_mc_metric(a, b):
     a = tf.unstack(a, axis=3)
     b = tf.unstack(b, axis=3)
@@ -124,17 +109,3 @@ def dice_mc_loss(a, b):
 
 def dice_bce_mc_loss(a, b):
     return 0.3 * dice_mc_loss(a, b) + tf.keras.losses.binary_crossentropy(a, b)
-
-
-# train_dataset = dataset.take(2000).cache()
-# test_dataset = dataset.skip(2000).take(100).cache()
- 
-# train_dataset = train_dataset.batch(8)
-# test_dataset = test_dataset.batch(8)
-
-# model.load_weights('ai/weights/model.weights.h5')
-# Компиляция модели
-# model.compile(optimizer='adam', loss=[dice_bce_mc_loss], metrics=[dice_mc_metric])
-# history_dice = model.fit(train_dataset, validation_data=test_dataset, epochs=25, initial_epoch=0)
-
-# model.save_weights('weights/model.weights.h5')
