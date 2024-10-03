@@ -1,3 +1,4 @@
+import ast
 from flask import Flask, jsonify, render_template, request
 import pandas as pd
 import math
@@ -6,6 +7,12 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from datetime import datetime, timedelta
+from ai.make_map_screen import save_map_image
+from ai.predict import predict_place
+from ai.post_edit import post_edit
+# # from ai.tetst import calculate_pixels_per_centimeter
+from make_mask_of_radius import make_radius_mask
+from clean_4 import  make_txt_mask_of_radius
 
 app = Flask(__name__)
 
@@ -34,6 +41,17 @@ app = Flask(__name__)
 
 # parse_dates(df, 'Дата ПСР')
 # parse_dates(df, 'Дата завершения')
+def calculate_pixels_per_centimeter(resolution_x, resolution_y, screen_diagonal_inch):
+    # Вычисляем разрешение по диагонали
+    diagonal_resolution = (resolution_x ** 2 + resolution_y ** 2) ** 0.5
+    
+    # Вычисляем PPI (pixels per inch)
+    ppi = diagonal_resolution / screen_diagonal_inch
+    
+    # Конвертируем PPI в пиксели на сантиметр
+    pixels_per_centimeter = ppi / 2.54
+    
+    return pixels_per_centimeter
 
 # Функция расчета расстояния
 def haversine(lat1, lon1, lat2, lon2):
@@ -74,7 +92,7 @@ def get_behavior_coef(behavior_data):
         behavior_coef = 0.2
     return behavior_coef, result_text + ' ' + str(max_percentage) + '%'
 
-def get_behavior_data(data, current_time, current_date):
+def get_behavior_data(data, current_time, current_date, bad_mentality=0):
     if 6 <= current_time < 12:
         time = "morning"
     elif 12 <= current_time < 18:
@@ -87,11 +105,15 @@ def get_behavior_data(data, current_time, current_date):
         current_time = f'0{current_time}'
 
     print(current_time)
+    mentality = str(data.get('mental_condition'))
+    if bad_mentality == 1 and mentality == 'stable':
+        mentality = 'unstable'
+
     data_beh = {
             'Возраст': int(data.get('age')),
             'Пол': str(data.get('gender')),
             'Физическое состояние': str(data.get('physical_condition')),
-            'Психическое состояние': str(data.get('mental_condition')),
+            'Психическое состояние': mentality,
             'Опыт нахождения в дикой природе': str(data.get('experience')),
             'Знание местности': str(data.get('local_knowledge')),
             'Наличие телефона': str(data.get('phone')),
@@ -166,7 +188,10 @@ def get_radius(data, age, hours_elapsed, terrain_passability=None, path_curvatur
             time_passed = 0
             day +=1
             prev_radius.append(total_radius)
-        data_beh, time = get_behavior_data(data, time_passed, current_date)
+        if day == 3:
+            data_beh, time = get_behavior_data(data, time_passed, current_date, 1)
+        else:
+            data_beh, time = get_behavior_data(data, time_passed, current_date)
         # print(data_beh)
 
         behavior_data, weather = predict_behavior(data_beh)
@@ -218,6 +243,52 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     distance = R * c
     return distance
+
+def make_real_radius(coords_psr, prev_radius, radius):
+    coords_psr = (coords_psr['latitude'], coords_psr['longitude'])
+    prev_radius.append(radius)
+    frames = []
+    a14 = 3.76
+    a13 = 1.88
+    a12 = 0.94
+    a11 = 0.47
+    a10 = 0.235
+    a9 = 0.1175
+    a8 = 0.05875
+    a7 = 0.029375
+    for i,r in enumerate(prev_radius):
+        r = math.ceil(r)
+        save_map_image(r, coords_psr, f'map_image{i}.png')
+        frames.append(f'map_image{i}.png')
+    predict_place(frames)
+    try:
+        for i,f in enumerate(frames):
+            post_edit(f'masked_{f}')
+            if prev_radius[i] <= 1:
+                a = a14  # Более близкий уровень приближения
+            elif prev_radius[i] <= 3:
+                a = a13  # Уровень приближения для 5 км
+            elif prev_radius[i] <= 6:
+                a = a12  # Уровень приближения для 10 км
+            elif prev_radius[i] <= 13:
+                a = a11
+            elif prev_radius[i] <= 26:
+                a = a10
+            elif prev_radius[i] <= 53:
+                a = a9
+            elif prev_radius[i] <= 106:
+                a = a8
+            else:
+                a = a7
+            pixels_per_cm = calculate_pixels_per_centimeter(1920,1080,14)
+            radius_in_pixel = int(prev_radius[i] * a * pixels_per_cm)
+            # print("!!!!"+radius_in_pixel)
+            result, center = make_radius_mask(f'masked_{f}', radius_in_pixel)
+            make_txt_mask_of_radius(f'masked_{f}', coords_psr, prev_radius[i], result, center)
+    except Exception as e:
+        print(e)
+
+
 
 @app.route('/radius', methods=['POST'])
 def radius():
@@ -271,6 +342,12 @@ def radius():
 
         # Вызов функции для получения радиуса
         radius, extra_info, prev_radius = get_radius(data, int(data.get('age')), int(hours_difference))
+        # make_real_radius(coords_psr, prev_radius, radius)
+
+        with open('templates/masked_map_image0.txt', 'r') as data:
+            test_string = data.read()
+            test = ast.literal_eval(test_string)
+            print(test[0])
 
         return jsonify({
             'status': 'success',
@@ -279,7 +356,8 @@ def radius():
             'coords_finding': coords_finding,
             'behavior': behavior,
             'extra_info': extra_info,
-            'prev_radius': prev_radius
+            'prev_radius': prev_radius,
+            'test_data': test
         })
     except ValueError as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400

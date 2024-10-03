@@ -3,7 +3,7 @@ import glob
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from train import dataset, CLASSES
+# from train import dataset, CLASSES
 from skimage import measure
 from skimage.io import imread, imsave
 from skimage.transform import resize
@@ -126,13 +126,13 @@ def dice_bce_mc_loss(a, b):
     return 0.3 * dice_mc_loss(a, b) + tf.keras.losses.binary_crossentropy(a, b)
 
 
-train_dataset = dataset.take(2000).cache()
-test_dataset = dataset.skip(2000).take(100).cache()
+# train_dataset = dataset.take(2000).cache()
+# test_dataset = dataset.skip(2000).take(100).cache()
  
-train_dataset = train_dataset.batch(8)
-test_dataset = test_dataset.batch(8)
+# train_dataset = train_dataset.batch(8)
+# test_dataset = test_dataset.batch(8)
 
-model.load_weights('weights/model.weights.h5')
+# model.load_weights('ai/weights/model.weights.h5')
 # Компиляция модели
 # model.compile(optimizer='adam', loss=[dice_bce_mc_loss], metrics=[dice_mc_metric])
 # history_dice = model.fit(train_dataset, validation_data=test_dataset, epochs=25, initial_epoch=0)
