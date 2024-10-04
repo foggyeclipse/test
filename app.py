@@ -224,8 +224,8 @@ def get_behavior_data(data, current_time, current_date, bad_mentality=0):
         "Знание местности": str(data.get("local_knowledge")),
         "Наличие телефона": str(data.get("phone")),
         "Время суток": times_of_day,
-        "Моральные обязательства": "unknown",
-        "Внешние сигналы": "unknown",
+        "Моральные обязательства": str(data.get('moral_obligations')),
+        "Внешние сигналы": str(data.get('external_signals')),
         "Дата": current_date,
         "Время": f"{current_time}:00"
     }
@@ -401,11 +401,11 @@ def radius():
             'Опыт нахождения в дикой природе': str(data.get('experience')),
             'Знание местности': str(data.get('local_knowledge')),
             'Наличие телефона': str(data.get('phone')),
-            'Время суток': extra_info.split()[-1], #
-            'Моральные обязательства': "unknown",
-            'Внешние сигналы': "unknown",
-            'Дата': data.get('date_of_finding'), #
-            'Время': time_of_finding_str #
+            'Время суток': extra_info.split()[-1],
+            'Моральные обязательства': str(data.get('moral_obligations')),
+            'Внешние сигналы': str(data.get('external_signals')),
+            'Дата': data.get('date_of_finding'),
+            'Время': time_of_finding_str
         }
 
         behavior, _ = predict_behavior(behavior_context)

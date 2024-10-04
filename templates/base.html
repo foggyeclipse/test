@@ -114,8 +114,24 @@
                             </select>
                         </div>
                         <div class="form-group">
+                            <label for="phone">Моральные обязательства:</label>
+                            <select id="moral_obligations" name="moral_obligations" class="form-control">
+                                <option value="strong">Сильные</option>
+                                <option value="weak">Слабые</option>
+                                <option value="unknown">Неизвестно</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="phone">Наличие телефона:</label>
                             <select id="phone" name="phone" class="form-control">
+                                <option value="unknown" selected>Неизвестно</option>
+                                <option value="yes">Да</option>
+                                <option value="no">Нет</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Внешние сигналы:</label>
+                            <select id="external_signals" name="external_signals" class="form-control">
                                 <option value="unknown" selected>Неизвестно</option>
                                 <option value="yes">Да</option>
                                 <option value="no">Нет</option>
