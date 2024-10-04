@@ -704,7 +704,16 @@ def pixel_to_latlng(pixel_coords, img_size, map_center, scale_factor, scale_fact
         latlng_coords.append([lat, lng])
     
     return latlng_coords
-def make_txt_mask_of_radius(p, coords_psr, radius, result, center):  
+def make_txt_mask_of_radius(p, coords_psr, radius, result, center):
+    kernel = np.ones((5, 5), np.uint8)  
+    # Применение эрозии перед дилатацией для уменьшения артефактов
+    result = cv2.erode(result, kernel, iterations=2)
+    result = cv2.dilate(result, kernel, iterations=3)  # Увеличение толщины контура
+    result = cv2.Canny(result, 100, 200)
+    mask1 = np.zeros((result.shape[0]+2, result.shape[1]+2), np.uint8)
+    cv2.floodFill(result, mask1, center, 255)
+    # cv2.imshow('A', result)
+    # cv2.waitKey(0)
     p = p.split('.')[0]
     contours, _ = cv2.findContours(result, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # Вывести первый контур (пример для одной фигуры)
@@ -728,7 +737,6 @@ def make_txt_mask_of_radius(p, coords_psr, radius, result, center):
 
     img_center = center
     img_size = (result.shape[1], result.shape[0])
-    print(img_size)
 
     # Координаты центра карты (широта и долгота)
     map_center = coords_psr
@@ -742,3 +750,5 @@ def make_txt_mask_of_radius(p, coords_psr, radius, result, center):
 
     with open(f'.\\templates\\{p}.txt', "w") as file:
         file.write(str(latlng_coords))
+
+# make_txt_mask_of_radius("masked_map_image0", (33,33), 23, cv2.imread("masked_map_image0.png"), (500,400) )

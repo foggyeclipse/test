@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from unet_ai import model
+from ai.unet_ai import model
 from skimage.transform import resize
 from skimage.io import imread, imsave
 
@@ -59,5 +59,5 @@ def predict_place(frames):
         color_mask = apply_colors_to_mask(predict, class_colors)
         
         color_mask_resized = resize(color_mask, frame.shape[:2], preserve_range=True).astype(np.uint8)
-       
+        
         imsave(f'./masked_{os.path.basename(filename)}', color_mask_resized)

@@ -75,6 +75,10 @@ $(document).ready(function () {
             data: JSON.stringify(data),
             success: function (response) {
                 if (response && response.coordinates_psr) {
+                    if (map) {
+                        map.remove();
+                        mapCreated = false;
+                    }
                     if (!mapCreated) {
                         map = L.map('map').setView([response.coordinates_psr.latitude, response.coordinates_psr.longitude], 13);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -93,41 +97,36 @@ $(document).ready(function () {
                     L.marker([response.coordinates_psr.latitude, response.coordinates_psr.longitude]).addTo(map)
                         .bindTooltip('Центр ПСР')
                         .openTooltip();
-                    
-                    var circles = [];
-                    var radiusInMeters = response.radius * 1000;
-                    var circle = L.circle([response.coordinates_psr.latitude, response.coordinates_psr.longitude], {
+
+                    var maskCoords = response.real_radius;
+    
+                    var polygon = L.polygon(maskCoords[maskCoords.length-1], {
                         color: 'blue',
                         fillColor: '#add8e6',
-                        fillOpacity: 0.5,
-                        radius: radiusInMeters
+                        fillOpacity: 0.5
                     }).addTo(map);
 
-                    circle.bindTooltip("Общий радиус: " + response.radius + " км", {
+                    polygon.bindTooltip("Общий радиус: " + response.radius + " км", {
                         permanent: false,
-                        direction: 'top',
-                        className: 'circle-tooltip'
+                        direction: 'top'
                     });
-                    circles.push(circle);
 
 
-                    for (var i = response.previous_radius.length - 1; i >= 0; i--) {
+
+                    for (var i = maskCoords.length - 2; i >= 0; i--) {
                         var radius = response.previous_radius[i];
-                        var radiusInMeters = radius * 1000;
 
-                        var circle = L.circle([response.coordinates_psr.latitude, response.coordinates_psr.longitude], {
+                        var polygon = L.polygon(maskCoords[i], {
                             color: 'blue',
                             fillColor: '#add8e6',
-                            fillOpacity: 0,
-                            radius: radiusInMeters
+                            fillOpacity: 0.5
                         }).addTo(map);
 
-                        circle.bindTooltip("День " + parseInt(i+1, 10) + " радиус: " + radius + " км", {
+                        polygon.bindTooltip("День " + parseInt(i+1, 10) + " радиус: " + radius + " км", {
                             permanent: false,
-                            direction: 'top',
-                            className: 'circle-tooltip'
+                            direction: 'top'
                         });
-                        circles.push(circle);
+
                     }
 
                     if (response.coordinates_finding) {

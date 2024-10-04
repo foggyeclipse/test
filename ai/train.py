@@ -1,6 +1,6 @@
 import glob
 import tensorflow as tf
-from unet_ai import model, dice_mc_metric, dice_bce_mc_loss
+from ai.unet_ai import model, dice_mc_metric, dice_bce_mc_loss
 
 print(f'Tensorflow version {tf.__version__}')
 print(f'GPU is {"ON" if tf.config.list_physical_devices("GPU") else "OFF" }')

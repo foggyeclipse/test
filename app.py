@@ -1,7 +1,14 @@
 import re
+import ast
+import math
 import requests
 from bs4 import BeautifulSoup
+from ai.post_edit import post_edit
+from ai.predict import predict_place
 from datetime import datetime, timedelta
+from clean_4 import  make_txt_mask_of_radius
+from ai.make_map_screen import save_map_image
+from make_mask_of_radius import make_radius_mask
 from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
@@ -11,6 +18,75 @@ def round_to_nearest_interval(hours):
         raise ValueError("Число должно быть в диапазоне от 0 до 24")
     
     return (hours // 6) * 6
+
+ZOOM_LEVELS = {
+    (0, 1): 3.76,
+    (1, 3): 1.88, 
+    (3, 6): 0.94, 
+    (6, 13): 0.47,
+    (13, 26): 0.235,
+    (26, 53): 0.1175,
+    (53, 106): 0.05875,
+    (106, float('inf')): 0.029375,
+}
+
+def get_zoom_factor(radius):
+    for bounds, factor in ZOOM_LEVELS.items():
+        if bounds[0] <= radius < bounds[1]:
+            return factor
+    return 0.029375
+
+def calculate_pixels_per_centimeter(resolution_x, resolution_y, screen_diagonal_inch):
+    # Вычисляем разрешение по диагонали
+    diagonal_resolution = (resolution_x ** 2 + resolution_y ** 2) ** 0.5
+    
+    # Вычисляем PPI (pixels per inch)
+    ppi = diagonal_resolution / screen_diagonal_inch
+    
+    # Конвертируем PPI в пиксели на сантиметр
+    pixels_per_centimeter = ppi / 2.54
+    
+    return pixels_per_centimeter
+
+
+def make_real_radius(coords_psr, prev_radius, radius):
+    coords_psr = (coords_psr['latitude'], coords_psr['longitude'])
+    prev_radius.append(radius) 
+    frames = []
+    real_radius = []
+
+    for i, r in enumerate(prev_radius):
+        r_ceil = math.ceil(r)
+        image_filename = f'map_image{i}.png'
+        save_map_image(r_ceil, coords_psr, image_filename)
+        frames.append(image_filename)
+
+    predict_place(frames)
+
+    try:
+        for i, frame in enumerate(frames):
+            masked_frame = f'masked_{frame}'
+            post_edit(masked_frame)
+
+            zoom_factor = get_zoom_factor(prev_radius[i])
+
+            pixels_per_cm = calculate_pixels_per_centimeter(1920, 1080, 14)
+
+            radius_in_pixel = int(prev_radius[i] * zoom_factor * pixels_per_cm)
+
+            result, center = make_radius_mask(masked_frame, radius_in_pixel)
+            make_txt_mask_of_radius(masked_frame, coords_psr, prev_radius[i], result, center)
+
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+    
+    for f in frames:
+        f = f.split('.')[0]
+        with open(f'templates/masked_{f}.txt', 'r') as data:
+                radius_string = data.read()
+                real_radius.append(ast.literal_eval(radius_string))
+    
+    return real_radius
 
 def get_weather_data(date, time):
     headers = {
@@ -333,6 +409,7 @@ def radius():
         }
 
         behavior, _ = predict_behavior(behavior_context)
+        real_radius = make_real_radius(coordinates_psr, previous_radius, radius)
 
         return jsonify({
             'status': 'success',
@@ -341,7 +418,8 @@ def radius():
             'coordinates_finding': coordinates_finding,
             'behavior': behavior,
             'extra_info': extra_info,
-            'previous_radius': previous_radius
+            'previous_radius': previous_radius,
+            'real_radius': real_radius
         })
     
     except ValueError as e:

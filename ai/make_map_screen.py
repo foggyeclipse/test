@@ -91,6 +91,9 @@ def save_map_image(radius_km, center_coords, output_image_path="map_image.png"):
 
     screenshot_path = "screenshot.png"
     driver.save_screenshot(screenshot_path)
+    screenshot = Image.open(screenshot_path)
+    
+    screenshot.save(output_image_path)
 
     driver.quit()
 

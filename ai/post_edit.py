@@ -3,7 +3,7 @@ import numpy as np
 
 def post_edit(path):
     image = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-
+    
     # Преобразование изображения в цветовую модель HSV
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
